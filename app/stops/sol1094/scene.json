@@ -1,0 +1,302 @@
+{
+ "sol": 1094,
+ "time": "2015-09-04T05:18:00.892",
+ "site_drive": "0492236",
+ "stop": {
+  "RMC": "49_2236",
+  "site": 49,
+  "drive": 2236,
+  "sol": 1094,
+  "easting": 8142557.763,
+  "northing": -276910.665,
+  "elev_geoid": -4434.47,
+  "lon": 137.3698745,
+  "lat": -4.67165041,
+  "roll": 2.26,
+  "pitch": 8.65,
+  "yaw": 178.95,
+  "yaw_rad": 3.12332,
+  "tilt": 8.94,
+  "dist_m": 25.54,
+  "dist_total_m": 11231.81,
+  "dist_km": 11.02,
+  "dist_mi": 6.85,
+  "drive_type": "final"
+ },
+ "rover_heading": 178.95318859185383,
+ "frames": [
+  {
+   "stereo_cover": 0.7396,
+   "da_absrel": 0.0593,
+   "da_within25": 0.9315,
+   "da_absrel_plain": 0.0593,
+   "align": "plain",
+   "filled_cover": 0.993,
+   "id": "NLB_494614839RASLF0492236NCAM00385M1",
+   "azimuth": 159.2338,
+   "elevation": -21.2286
+  },
+  {
+   "stereo_cover": 0.7673,
+   "da_absrel": 0.0423,
+   "da_within25": 0.99,
+   "da_absrel_plain": 0.0439,
+   "align": "power",
+   "filled_cover": 0.9764,
+   "id": "NLB_494614870RASLF0492236NCAM00385M1",
+   "azimuth": 186.7361,
+   "elevation": -21.73
+  },
+  {
+   "stereo_cover": 0.4444,
+   "da_absrel": 0.0148,
+   "da_within25": 1.0,
+   "da_absrel_plain": 0.0151,
+   "align": "weighted",
+   "filled_cover": 0.6208,
+   "id": "NLB_494615198RASLF0492236NCAM00353M1",
+   "azimuth": 157.1331,
+   "elevation": -43.7781
+  },
+  {
+   "stereo_cover": 0.5382,
+   "da_absrel": 0.016,
+   "da_within25": 0.9999,
+   "da_absrel_plain": 0.016,
+   "align": "plain",
+   "filled_cover": 0.7728,
+   "id": "NLB_494615230RASLF0492236NCAM00353M1",
+   "azimuth": 181.9359,
+   "elevation": -44.1992
+  },
+  {
+   "stereo_cover": 0.4483,
+   "da_absrel": 0.074,
+   "da_within25": 0.931,
+   "da_absrel_plain": 0.074,
+   "align": "plain",
+   "filled_cover": 0.6779,
+   "id": "NLB_494615915RASLF0492236NCAM00265M1",
+   "azimuth": 129.9599,
+   "elevation": -17.0383
+  },
+  {
+   "stereo_cover": 0.6592,
+   "da_absrel": 0.0433,
+   "da_within25": 0.9746,
+   "da_absrel_plain": 0.0433,
+   "align": "plain",
+   "filled_cover": 0.9122,
+   "id": "NLB_494615939RASLF0492236NCAM00265M1",
+   "azimuth": 159.5669,
+   "elevation": -16.9469
+  },
+  {
+   "stereo_cover": 0.6846,
+   "da_absrel": 0.0488,
+   "da_within25": 0.9944,
+   "da_absrel_plain": 0.0538,
+   "align": "weighted",
+   "filled_cover": 0.8732,
+   "id": "NLB_494615972RASLF0492236NCAM00265M1",
+   "azimuth": 189.765,
+   "elevation": -16.9051
+  },
+  {
+   "stereo_cover": 0.6542,
+   "da_absrel": 0.0272,
+   "da_within25": 0.9903,
+   "da_absrel_plain": 0.0272,
+   "align": "plain",
+   "filled_cover": 0.8742,
+   "id": "NLB_494615996RASLF0492236NCAM00265M1",
+   "azimuth": 219.8328,
+   "elevation": -16.8829
+  },
+  {
+   "stereo_cover": 0.6479,
+   "da_absrel": 0.0301,
+   "da_within25": 0.9868,
+   "da_absrel_plain": 0.0301,
+   "align": "plain",
+   "filled_cover": 0.8491,
+   "id": "NLB_494616021RASLF0492236NCAM00265M1",
+   "azimuth": 249.7317,
+   "elevation": -16.8871
+  },
+  {
+   "stereo_cover": 0.6295,
+   "da_absrel": 0.0265,
+   "da_within25": 1.0,
+   "da_absrel_plain": 0.0265,
+   "align": "plain",
+   "filled_cover": 0.9337,
+   "id": "NLB_494616055RASLF0492236NCAM00354M1",
+   "azimuth": 202.9937,
+   "elevation": -40.227
+  },
+  {
+   "stereo_cover": 0.5861,
+   "da_absrel": 0.0214,
+   "da_within25": 0.9996,
+   "da_absrel_plain": 0.0214,
+   "align": "plain",
+   "filled_cover": 0.9563,
+   "id": "NLB_494616087RASLF0492236NCAM00354M1",
+   "azimuth": 229.7956,
+   "elevation": -43.8223
+  },
+  {
+   "stereo_cover": 0.6415,
+   "da_absrel": 0.0254,
+   "da_within25": 1.0,
+   "da_absrel_plain": 0.0255,
+   "align": "weighted",
+   "filled_cover": 0.9867,
+   "id": "NLB_494616118RASLF0492236NCAM00354M1",
+   "azimuth": 258.749,
+   "elevation": -48.3844
+  },
+  {
+   "stereo_cover": 0.5699,
+   "da_absrel": 0.032,
+   "da_within25": 1.0,
+   "da_absrel_plain": 0.0325,
+   "align": "weighted",
+   "filled_cover": 0.9127,
+   "id": "NLB_494616142RASLF0492236NCAM00354M1",
+   "azimuth": 290.2869,
+   "elevation": -52.7025
+  },
+  {
+   "stereo_cover": 0.3191,
+   "da_absrel": 0.0267,
+   "da_within25": 1.0,
+   "da_absrel_plain": 0.027,
+   "align": "weighted",
+   "filled_cover": 0.6795,
+   "id": "NLB_494616180RASLF0492236NCAM00354M1",
+   "azimuth": 325.1588,
+   "elevation": -55.4584
+  },
+  {
+   "stereo_cover": 0.6131,
+   "da_absrel": 0.0522,
+   "da_within25": 0.9687,
+   "da_absrel_plain": 0.0522,
+   "align": "plain",
+   "filled_cover": 0.8132,
+   "id": "NLB_494616214RASLF0492236NCAM07753M1",
+   "azimuth": 279.9596,
+   "elevation": -16.9283
+  },
+  {
+   "stereo_cover": 0.616,
+   "da_absrel": 0.0566,
+   "da_within25": 0.941,
+   "da_absrel_plain": 0.0566,
+   "align": "plain",
+   "filled_cover": 0.735,
+   "id": "NLB_494616245RASLF0492236NCAM07753M1",
+   "azimuth": 309.6183,
+   "elevation": -16.9028
+  },
+  {
+   "stereo_cover": 0.501,
+   "da_absrel": 0.0504,
+   "da_within25": 0.9682,
+   "da_absrel_plain": 0.0504,
+   "align": "plain",
+   "filled_cover": 0.7235,
+   "id": "NLB_494616276RASLF0492236NCAM07753M1",
+   "azimuth": 339.7285,
+   "elevation": -16.9219
+  },
+  {
+   "stereo_cover": 0.2022,
+   "da_absrel": 0.0638,
+   "da_within25": 0.9769,
+   "da_absrel_plain": 0.064,
+   "align": "power",
+   "filled_cover": 0.7758,
+   "id": "NLB_494616367RASLF0492236NCAM07753M1",
+   "azimuth": 9.9485,
+   "elevation": -16.9289
+  },
+  {
+   "stereo_cover": 0.3068,
+   "da_absrel": 0.0613,
+   "da_within25": 0.9787,
+   "da_absrel_plain": 0.0613,
+   "align": "plain",
+   "filled_cover": 0.5255,
+   "id": "NLB_494616397RASLF0492236NCAM07753M1",
+   "azimuth": 39.6429,
+   "elevation": -16.9661
+  },
+  {
+   "stereo_cover": 0.4788,
+   "da_absrel": 0.0725,
+   "da_within25": 0.9198,
+   "da_absrel_plain": 0.0725,
+   "align": "plain",
+   "filled_cover": 0.6829,
+   "id": "NLB_494616428RASLF0492236NCAM07753M1",
+   "azimuth": 69.7307,
+   "elevation": -16.9404
+  },
+  {
+   "stereo_cover": 0.3231,
+   "da_absrel": 0.1086,
+   "da_within25": 0.9309,
+   "da_absrel_plain": 0.1086,
+   "align": "plain",
+   "filled_cover": 0.596,
+   "id": "NLB_494616459RASLF0492236NCAM07753M1",
+   "azimuth": 99.7237,
+   "elevation": -16.959
+  }
+ ],
+ "show_frame": 11,
+ "counts": {
+  "vertices": 79616,
+  "faces": 157682,
+  "faces_stereo": 111751
+ },
+ "layout": [
+  "pos:int16x3 cm",
+  "gray:uint8",
+  "src:uint8",
+  "slope:uint8",
+  "index:uint32x3"
+ ],
+ "frame_face_ranges": [
+  [
+   0,
+   111751,
+   45931
+  ]
+ ],
+ "map": {
+  "cell": 0.25,
+  "radius": 24.0,
+  "height_min": -2.596920338798972,
+  "height_max": 2.6777072802422537,
+  "area_m2": 1868.125,
+  "slope_share": {
+   "under15": 0.874080553457119,
+   "15to25": 0.08297880799968192,
+   "over25": 0.04294063854319908
+  },
+  "da_only_share": 0.2366677818668451
+ },
+ "summary": {
+  "median_da_absrel": 0.0433,
+  "median_da_absrel_plain": 0.0439,
+  "worst_da_absrel": 0.1086,
+  "worst_da_absrel_plain": 0.1086,
+  "mean_stereo_cover": 0.5414666666666668,
+  "mean_filled_cover": 0.8033523809523809,
+  "frames_with_stereo": 21
+ }
+}

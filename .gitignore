@@ -1,0 +1,7 @@
+# downloads, caches and generated 3D files (rebuild with the scripts)
+data/
+notebooks/train_raw/
+notebooks/data/
+*.part
+__pycache__/
+.ipynb_checkpoints/

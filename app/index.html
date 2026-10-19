@@ -1,0 +1,601 @@
+<meta charset="utf-8">
+<title>Gale Marswalk Planner</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=Martian+Mono:wght@400;600&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a mission-planning console. The terrain view is the work surface; the plan, the numbers and the
+   conditions live in one rail beside it, read top to bottom in the order an EVA planner decides. */
+:root {
+  --bg: #edf0f3; --panel: #ffffff; --fg: #19212b; --muted: #586473; --line: #cfd6de;
+  --accent: #b06a1f; --accent-soft: #f3e3cf; --view: #1c232c; --view-fg: #e6ebf0;
+  --ok: #2f9e62; --warn: #d9961c; --bad: #d64541; --route: #4fc3f7;
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Public Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --f-data: "Martian Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10151b; --panel: #171e26; --fg: #e3e8ed; --muted: #95a1af; --line: #29333e;
+    --accent: #e3a254; --accent-soft: #3a2a17; --view: #0b0f14; --route: #6fd3ff; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10151b; --panel: #171e26; --fg: #e3e8ed; --muted: #95a1af; --line: #29333e;
+  --accent: #e3a254; --accent-soft: #3a2a17; --view: #0b0f14; --route: #6fd3ff; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 44px; }
+.wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--f-display); font-stretch: 78%; font-weight: 750; margin: 0; line-height: 1.05; text-wrap: balance; }
+h1 { font-size: clamp(1.9rem, 4.4vw, 3rem); }
+h2 { font-size: clamp(1.3rem, 2.4vw, 1.7rem); }
+h3 { font-size: 1.05rem; font-stretch: 85%; }
+p { margin: 0; max-width: 70ch; }
+.label { font: 600 0.66rem/1.3 var(--f-data); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+header { display: grid; gap: 10px; }
+header .lede { color: var(--muted); font-size: 1.02rem; }
+header .label b { color: var(--accent); font-weight: 600; }
+
+.app { display: grid; grid-template-columns: minmax(0, 1fr) 340px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+.stage { display: grid; grid-template-rows: auto 1fr; min-width: 0; background: var(--view); }
+.tabs { display: flex; gap: 2px; padding: 8px 8px 0; background: var(--view); overflow-x: auto; }
+.tabs button { font: 600 0.72rem var(--f-data); letter-spacing: 0.03em; color: var(--view-fg); background: transparent; border: 0; border-radius: 6px 6px 0 0; padding: 9px 14px; cursor: pointer; opacity: .7; white-space: nowrap; }
+.tabs button[aria-selected="true"] { background: rgba(255,255,255,.08); opacity: 1; box-shadow: inset 0 -2px 0 var(--accent); }
+.view { position: relative; height: min(72vh, 680px); min-height: 420px; }
+.view canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#map { cursor: crosshair; }
+.overlay { position: absolute; color: var(--view-fg); font: 0.68rem/1.4 var(--f-data); pointer-events: none; text-shadow: 0 1px 4px rgba(0,0,0,.8); }
+.hint { left: 12px; right: 12px; bottom: 10px; }
+.scale { left: 12px; top: 12px; display: grid; gap: 3px; }
+.scale i { display: block; height: 5px; border: 1.5px solid var(--view-fg); border-top: 0; }
+.status { position: absolute; inset: 0; display: grid; place-items: center; color: var(--view-fg); font: 500 0.8rem var(--f-data); text-align: center; padding: 16px; }
+.mapkey { right: 12px; top: 12px; display: grid; gap: 4px; background: rgba(10,14,18,.55); padding: 8px 10px; border-radius: 6px; text-shadow: none; }
+.mapkey span { display: flex; align-items: center; gap: 7px; }
+.sw { width: 11px; height: 11px; border-radius: 3px; flex: none; display: inline-block; }
+.view-controls select { font: 600 0.7rem var(--f-data); background: rgba(10,14,18,.6); color: var(--view-fg); border: 1px solid rgba(255,255,255,.3); border-radius: 5px; padding: 5px 6px; }
+.view-controls a { color: var(--view-fg); font: 600 0.68rem var(--f-data); }
+.list { display: grid; gap: 6px; }
+.list button { display: flex; justify-content: space-between; gap: 8px; text-align: left; font: 500 0.82rem var(--f-body); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+.list button:hover { border-color: var(--accent); }
+.list button span { color: var(--muted); font: 0.72rem var(--f-data); font-variant-numeric: tabular-nums; }
+.view-controls { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 8px; align-items: center; color: var(--view-fg); font: 0.68rem var(--f-data); background: rgba(10,14,18,.55); padding: 6px 10px; border-radius: 6px; }
+
+.rail { display: grid; align-content: start; gap: 18px; padding: 18px; border-left: 1px solid var(--line); min-width: 0; max-height: calc(min(72vh, 680px) + 42px); overflow-y: auto; }
+.group { display: grid; gap: 8px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn { font: 600 0.72rem var(--f-data); letter-spacing: 0.03em; padding: 9px 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.btn:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.field { display: grid; gap: 4px; font-size: 0.84rem; }
+.field input[type="range"] { width: 100%; accent-color: var(--accent); }
+.field input[type="number"], .field input[type="time"] { font: 500 0.85rem var(--f-data); padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); width: 100%; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 0.86rem; cursor: pointer; }
+.check input { accent-color: var(--accent); width: 16px; height: 16px; }
+.step { font-size: 0.86rem; color: var(--muted); }
+.step b { color: var(--fg); }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.fact { background: var(--panel); padding: 9px 10px; display: grid; gap: 2px; }
+.fact b { font: 600 1.05rem/1.15 var(--f-data); font-variant-numeric: tabular-nums; }
+.fact small { color: var(--muted); font-size: 0.72rem; }
+.flags { display: grid; gap: 6px; }
+.flag { font-size: 0.82rem; padding: 7px 10px; border-radius: 6px; border-left: 3px solid; }
+.flag.ok { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.flag.warn { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.flag.bad { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+.profile svg { width: 100%; height: auto; display: block; }
+.empty { font-size: 0.84rem; color: var(--muted); background: var(--accent-soft); padding: 10px 12px; border-radius: 8px; }
+
+.below { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.below > div { display: grid; gap: 8px; align-content: start; }
+.below ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 0.9rem; }
+.credit { color: var(--muted); font-size: 0.8rem; border-top: 1px solid var(--line); padding-top: 14px; }
+a { color: var(--accent); }
+
+@media (max-width: 980px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .rail { border-left: 0; border-top: 1px solid var(--line); max-height: none; }
+  .below { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) { .view { height: 60vh; min-height: 360px; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="label">AstroNox · NASA Space Apps 2026 rehearsal · <b>Gale Crater, Mars</b> · around Curiosity's sol 1100 stop</div>
+    <h1>Gale Marswalk Planner</h1>
+    <p class="lede">Plan a walk for an astronaut on real Mars terrain. Tap a start and an end on the orbital map: the planner finds the quickest route that stays off steep ground, then shows the climb, the time it takes, and the conditions on the day.</p>
+  </header>
+
+  <div class="app">
+    <div class="stage">
+      <div class="tabs" role="tablist" aria-label="Views">
+        <button role="tab" id="tab-map" aria-selected="true" data-view="map">Map from orbit</button>
+        <button role="tab" id="tab-3d" aria-selected="false" data-view="terrain">3D terrain</button>
+        <button role="tab" id="tab-close" aria-selected="false" data-view="close">Ground close-ups</button>
+      </div>
+      <div class="view" id="view-map">
+        <canvas id="map"></canvas>
+        <div class="status" id="status">Loading orbital data…</div>
+        <div class="overlay scale"><i id="scalebar"></i><span id="scaletext">100 m</span></div>
+        <div class="overlay mapkey" id="mapkey">
+          <span><i class="sw" style="background:transparent;border:1px solid var(--view-fg)"></i>under 15° easy</span>
+          <span><i class="sw" style="background:#d9961c"></i>15–25° careful</span>
+          <span><i class="sw" style="background:#d64541"></i>over 25° no go</span>
+          <span><i class="sw" style="background:var(--accent)"></i>Curiosity's path</span>
+          <span><i class="sw" style="background:var(--route)"></i>planned walk</span>
+        </div>
+        <div class="overlay hint" id="maphint">Drag to pan · scroll or pinch to zoom · tap twice to plan a walk</div>
+      </div>
+      <div class="view" id="view-terrain" hidden>
+        <canvas id="terrain3d"></canvas>
+        <div class="status" id="status3d">Building 3D terrain…</div>
+        <div class="view-controls"><label for="exag">Height ×</label><input type="range" id="exag" min="1" max="4" step="0.5" value="2"><span id="exagv" class="mono">2×</span></div>
+      </div>
+      <div class="view" id="view-close" hidden>
+        <canvas id="close3d"></canvas>
+        <div class="status" id="statusclose">Loading Navcam ground model…</div>
+        <div class="view-controls"><label for="close-pick">Stop</label><select id="close-pick"></select><button class="btn" id="close-mode" style="color:var(--view-fg);border-color:rgba(255,255,255,.3)">Show walk slope</button><a id="close-report" href="#" target="_blank" rel="noopener">Full report</a></div>
+      </div>
+    </div>
+
+    <aside class="rail">
+      <div class="group">
+        <h3>Plan a walk</h3>
+        <p class="step" id="stepline"><b>Tap the start</b> on the map.</p>
+        <div class="field"><label for="maxslope">Steepest ground allowed: <b class="mono" id="maxslopev">25°</b></label>
+          <input type="range" id="maxslope" min="10" max="35" step="1" value="25"></div>
+        <div class="two">
+          <div class="field"><label for="sol">Walk on sol</label><input type="number" id="sol" min="1" max="5000" value="1100"></div>
+          <div class="field"><label for="start">Leave at (local)</label><input type="time" id="start" value="09:30"></div>
+        </div>
+        <div class="row"><button class="btn primary" id="example">Example walk</button><button class="btn" id="clear">Clear</button></div>
+      </div>
+
+      <div class="group" id="results">
+        <div class="empty" id="noroute">No walk planned yet. Tap two points on the map, or load the example.</div>
+        <div id="routebox" hidden>
+          <div class="facts">
+            <div class="fact"><small>Walking distance</small><b id="r-dist">–</b></div>
+            <div class="fact"><small>Time on foot</small><b id="r-time">–</b></div>
+            <div class="fact"><small>Total climb</small><b id="r-up">–</b></div>
+            <div class="fact"><small>Total descent</small><b id="r-down">–</b></div>
+            <div class="fact"><small>Steepest step</small><b id="r-max">–</b></div>
+            <div class="fact"><small>Back by</small><b id="r-end">–</b></div>
+          </div>
+        </div>
+        <div class="profile" id="profile"></div>
+        <div class="flags" id="flags"></div>
+      </div>
+
+      <div class="group">
+        <h3 id="cond-title">Conditions on sol 1100</h3>
+        <div class="facts" id="conditions"></div>
+        <small class="step" id="cond-note">Measured by Curiosity's REMS weather station.</small>
+      </div>
+
+      <div class="group">
+        <h3>Ground close-ups</h3>
+        <p class="step">Stops where Curiosity's own photos were turned into 3D ground.</p>
+        <div class="list" id="closeup-list"></div>
+      </div>
+
+      <div class="group">
+        <h3>Map layers</h3>
+        <label class="check" for="lay-slope"><input type="checkbox" id="lay-slope" checked> Slope colours</label>
+        <label class="check" for="lay-path"><input type="checkbox" id="lay-path" checked> Curiosity's path and stops</label>
+      </div>
+    </aside>
+  </div>
+
+  <section class="below">
+    <div>
+      <h2>Where the data comes from</h2>
+      <ul>
+        <li><b>Ground shape and photo:</b> USGS merged maps of Gale Crater from orbit (HiRISE, CTX, HRSC): heights every 1 m, photo at 25 cm.</li>
+        <li><b>Curiosity's path and stops:</b> NASA's rover location feed (sol, site, drive, position).</li>
+        <li><b>Weather:</b> Curiosity's REMS station, one record per sol.</li>
+        <li><b>Radiation:</b> Curiosity's RAD instrument, about 0.64 mSv per sol on the surface.</li>
+        <li><b>Close-ups:</b> Curiosity Navcam stereo photos at each stop, gaps filled by Depth Anything V2.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>How the route is chosen</h2>
+      <ul>
+        <li>The ground is split into 2 m squares. Any square steeper than your limit is off-limits.</li>
+        <li>Walking speed changes with grade (Tobler's hiking rule), set to 3 km/h on flat ground in a suit.</li>
+        <li>The planner (A* search) finds the quickest path between your two taps.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>What's assumed</h2>
+      <ul>
+        <li>Speed and slope limits are example values, not NASA EVA rules.</li>
+        <li>1 m orbital heights miss rocks smaller than about 2 m; the Navcam close-up shows those.</li>
+        <li>Weather and radiation are what Curiosity measured on that sol, used as a forecast.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p class="credit">Rehearsal build, 18 Oct 2026, for the AstroNox team (NASA Space Apps, Karachi). Data: NASA/JPL-Caltech/MSSS (Curiosity Navcam, REMS, RAD, rover locations), USGS Astrogeology (MSL Gale merged DEM 1 m v3 and orthophoto 25 cm v3; HiRISE: NASA/JPL/University of Arizona). Depth model: Depth Anything V2 Small (Apache-2.0). 3D: three.js.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const S = { data: null, img: null, H: null, slope: null, cols: 0, rows: 0, g: 2, view: { s: 0.35, x: 0, y: 0 },
+              picks: [], route: null, slopeCanvas: null };
+  const SLOPE_COL = [[15, [47, 158, 98]], [25, [217, 150, 28]], [91, [214, 69, 65]]];
+  const VFLAT = 3.0 / 3.6;                                      // m/s on flat ground
+  const tobler = (grade) => VFLAT * Math.exp(-3.5 * Math.abs(grade + 0.05)) / Math.exp(-3.5 * 0.05);
+  const VMAX = tobler(-0.05);
+
+  function b64ToU8(b64) { const s = atob(b64.trim()), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
+  const fmtMin = (sec) => { const m = Math.round(sec / 60); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`; };
+  const hhmm = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(Math.round(min % 60)).padStart(2, '0')}`;
+  const toMin = (t) => { const [h, m] = (t || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
+
+  // ---------------- terrain + slope ----------------
+  function prepareTerrain(u8) {
+    const n = S.cols * S.rows, u16 = new Uint16Array(u8.buffer, 0, n);
+    S.H = new Float32Array(n); S.valid = new Uint8Array(n);
+    for (let i = 0; i < n; i++) { if (u16[i] !== 65535) { S.H[i] = u16[i] / 100; S.valid[i] = 1; } else S.H[i] = NaN; }
+    S.slope = new Float32Array(n);
+    const g = S.g, C = S.cols;
+    for (let y = 0; y < S.rows; y++) for (let x = 0; x < C; x++) {
+      const i = y * C + x;
+      if (!S.valid[i]) { S.slope[i] = 99; continue; }
+      const xl = x > 0 ? i - 1 : i, xr = x < C - 1 ? i + 1 : i, yu = y > 0 ? i - C : i, yd = y < S.rows - 1 ? i + C : i;
+      const dx = (S.H[xr] - S.H[xl]) / ((xr - xl) * g || 1), dy = (S.H[yd] - S.H[yu]) / (((yd - yu) / C) * g || 1);
+      S.slope[i] = Math.atan(Math.hypot(dx || 0, dy || 0)) * 180 / Math.PI;
+    }
+    const c = document.createElement('canvas'); c.width = C; c.height = S.rows;
+    const ctx = c.getContext('2d'), im = ctx.createImageData(C, S.rows);
+    for (let i = 0; i < n; i++) {
+      const s = S.slope[i], col = s > 90 ? null : SLOPE_COL.find(([lim]) => s < lim)[1];
+      if (!col) continue;
+      im.data[i * 4] = col[0]; im.data[i * 4 + 1] = col[1]; im.data[i * 4 + 2] = col[2]; im.data[i * 4 + 3] = s < 15 ? 0 : 160;  // easy ground stays clear so the photo reads
+    }
+    ctx.putImageData(im, 0, 0); S.slopeCanvas = c;
+  }
+
+  // ---------------- A* route ----------------
+  function plan(a, b, maxSlope) {
+    const C = S.cols, R = S.rows, g = S.g, n = C * R;
+    const ia = Math.round(a.y / g) * C + Math.round(a.x / g), ib = Math.round(b.y / g) * C + Math.round(b.x / g);
+    const blocked = (i) => !S.valid[i] || S.slope[i] > maxSlope;
+    if (blocked(ia) || blocked(ib)) return { error: 'That point is steeper than your limit or has no data. Pick a gentler spot.' };
+    const gScore = new Float32Array(n).fill(Infinity), came = new Int32Array(n).fill(-1), closed = new Uint8Array(n);
+    const heap = [], push = (f, i) => { heap.push([f, i]); let k = heap.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
+    const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let k = 0; for (;;) { const l = 2 * k + 1, r = l + 1; let m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top; };
+    const bx = ib % C, by = (ib / C) | 0, hfun = (i) => Math.hypot((i % C) - bx, ((i / C) | 0) - by) * g / VMAX;
+    gScore[ia] = 0; push(hfun(ia), ia);
+    const N8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+    while (heap.length) {
+      const [, i] = pop();
+      if (closed[i]) continue; closed[i] = 1;
+      if (i === ib) break;
+      const x = i % C, y = (i / C) | 0;
+      for (const [dx, dy] of N8) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= C || ny >= R) continue;
+        const j = ny * C + nx;
+        if (closed[j] || blocked(j)) continue;
+        const d = (dx && dy ? Math.SQRT2 : 1) * g, t = gScore[i] + d / tobler((S.H[j] - S.H[i]) / d);
+        if (t < gScore[j]) { gScore[j] = t; came[j] = i; push(t + hfun(j), j); }
+      }
+    }
+    if (!isFinite(gScore[ib])) return { error: 'No route stays under that slope limit. Raise the limit or pick closer points.' };
+    const cells = []; for (let i = ib; i !== -1; i = came[i]) cells.push(i); cells.reverse();
+    let dist = 0, up = 0, down = 0, maxs = 0; const prof = [[0, S.H[cells[0]]]];
+    for (let k = 1; k < cells.length; k++) {
+      const i = cells[k - 1], j = cells[k], dh = S.H[j] - S.H[i];
+      const run = Math.hypot((j % C) - (i % C), ((j / C) | 0) - ((i / C) | 0)) * g;
+      dist += Math.hypot(run, dh); if (dh > 0) up += dh; else down -= dh;
+      maxs = Math.max(maxs, S.slope[j]); prof.push([dist, S.H[j]]);
+    }
+    return { cells, time: gScore[ib], dist, up, down, maxs, prof };
+  }
+
+  // ---------------- map drawing ----------------
+  const mapC = $('map'), mctx = mapC.getContext('2d');
+  function fitMap() {
+    const r = mapC.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+    mapC.width = r.width * dpr; mapC.height = r.height * dpr; mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (!S.fitted && S.img) {
+      const size = S.data.window.size_m;
+      S.view.s = Math.min(r.width, r.height) / (size * 0.62);
+      S.view.x = r.width / 2 - (size / 2) * S.view.s; S.view.y = r.height / 2 - (size / 2) * S.view.s; S.fitted = true;
+    }
+    drawMap();
+  }
+  const toScreen = (x, y) => [S.view.x + x * S.view.s, S.view.y + y * S.view.s];
+  const toWorld = (sx, sy) => [(sx - S.view.x) / S.view.s, (sy - S.view.y) / S.view.s];
+  function drawMap() {
+    if (!S.img) return;
+    const r = mapC.getBoundingClientRect(), size = S.data.window.size_m, v = S.view;
+    mctx.fillStyle = css('--view'); mctx.fillRect(0, 0, r.width, r.height);
+    mctx.imageSmoothingEnabled = v.s < 2;
+    mctx.drawImage(S.img, v.x, v.y, size * v.s, size * v.s);
+    if ($('lay-slope').checked) { mctx.imageSmoothingEnabled = false; mctx.drawImage(S.slopeCanvas, v.x, v.y, size * v.s, size * v.s); }
+    if ($('lay-path').checked) {
+      mctx.strokeStyle = css('--accent'); mctx.lineWidth = 2.5; mctx.lineJoin = 'round';
+      for (const seg of S.data.path) { mctx.beginPath(); seg.forEach(([x, y], k) => { const [sx, sy] = toScreen(x, y); k ? mctx.lineTo(sx, sy) : mctx.moveTo(sx, sy); }); mctx.stroke(); }
+      mctx.font = '600 11px "Martian Mono", monospace';
+      for (const s of S.data.stops) {
+        const [sx, sy] = toScreen(s.x, s.y), big = S.closeSols.has(s.sol);
+        mctx.fillStyle = big ? '#ffffff' : css('--accent'); mctx.beginPath(); mctx.arc(sx, sy, big ? 6 : 3.2, 0, Math.PI * 2); mctx.fill();
+        if (big) { mctx.strokeStyle = css('--accent'); mctx.lineWidth = 3; mctx.stroke(); }
+        if (big || v.s > 1.2) { mctx.fillStyle = '#fff'; mctx.shadowColor = 'rgba(0,0,0,.8)'; mctx.shadowBlur = 4; mctx.fillText(big ? `sol ${s.sol} · 3D` : 'sol ' + s.sol, sx + 9, sy - 8); mctx.shadowBlur = 0; }
+      }
+    }
+    if (S.route) {
+      const C = S.cols, g = S.g;
+      mctx.strokeStyle = 'rgba(0,0,0,.55)'; mctx.lineWidth = 6; mctx.beginPath();
+      S.route.cells.forEach((i, k) => { const [sx, sy] = toScreen((i % C) * g, ((i / C) | 0) * g); k ? mctx.lineTo(sx, sy) : mctx.moveTo(sx, sy); }); mctx.stroke();
+      mctx.strokeStyle = css('--route'); mctx.lineWidth = 3; mctx.stroke();
+    }
+    S.picks.forEach((p, k) => {
+      const [sx, sy] = toScreen(p.x, p.y);
+      mctx.fillStyle = css('--route'); mctx.strokeStyle = '#0b0f14'; mctx.lineWidth = 2;
+      mctx.beginPath(); mctx.arc(sx, sy, 9, 0, Math.PI * 2); mctx.fill(); mctx.stroke();
+      mctx.fillStyle = '#0b0f14'; mctx.font = '700 11px "Martian Mono", monospace'; mctx.textAlign = 'center'; mctx.fillText(k ? 'B' : 'A', sx, sy + 4); mctx.textAlign = 'start';
+    });
+    const nice = [10, 20, 50, 100, 200, 500, 1000].find((m) => m * v.s > 70) || 1000;
+    $('scalebar').style.width = nice * v.s + 'px'; $('scaletext').textContent = nice + ' m';
+  }
+
+  function bindMap() {
+    const pts = new Map(); let moved = 0, last = null, pinch = null;
+    mapC.addEventListener('pointerdown', (e) => { mapC.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.offsetX, e.offsetY]); moved = 0; last = [e.offsetX, e.offsetY]; if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), s: S.view.s }; } });
+    mapC.addEventListener('pointermove', (e) => {
+      if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.offsetX, e.offsetY]);
+      if (pts.size === 2 && pinch) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); zoomAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (pinch.s * d / pinch.d) / S.view.s); moved = 99; return; }
+      const dx = e.offsetX - last[0], dy = e.offsetY - last[1]; moved += Math.abs(dx) + Math.abs(dy); last = [e.offsetX, e.offsetY];
+      S.view.x += dx; S.view.y += dy; drawMap();
+    });
+    const up = (e) => {
+      if (!pts.has(e.pointerId)) return; pts.delete(e.pointerId); if (pts.size < 2) pinch = null;
+      if (moved < 6 && e.type === 'pointerup') tapAt(e.offsetX, e.offsetY);
+    };
+    mapC.addEventListener('pointerup', up); mapC.addEventListener('pointercancel', up);
+    mapC.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.offsetX, e.offsetY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+  }
+  function zoomAt(sx, sy, f) { const s2 = Math.min(12, Math.max(0.12, S.view.s * f)); f = s2 / S.view.s; S.view.x = sx - (sx - S.view.x) * f; S.view.y = sy - (sy - S.view.y) * f; S.view.s = s2; drawMap(); }
+
+  function tapAt(sx, sy) {
+    const [x, y] = toWorld(sx, sy), size = S.data.window.size_m;
+    if (x < 0 || y < 0 || x >= size || y >= size) return;
+    if (S.picks.length >= 2) { S.picks = []; S.route = null; }
+    S.picks.push({ x, y });
+    if (S.picks.length === 2) runPlan(); else { $('stepline').innerHTML = '<b>Now tap the end</b> of the walk.'; drawMap(); }
+  }
+
+  function runPlan() {
+    $('stepline').textContent = 'Planning…';
+    setTimeout(() => {
+      const res = plan(S.picks[0], S.picks[1], +$('maxslope').value);
+      if (res.error) { S.route = null; showResult(null, res.error); }
+      else { S.route = res; showResult(res); }
+      drawMap(); if (S.t3d) S.t3d.setRoute(S.route);
+    }, 20);
+  }
+
+  // ---------------- results + conditions ----------------
+  function showResult(r, err) {
+    const flags = [];
+    $('routebox').hidden = !r; $('noroute').hidden = !!r; $('profile').innerHTML = '';
+    if (!r) { $('stepline').innerHTML = err ? '<b>No route.</b> Tap a new start.' : '<b>Tap the start</b> on the map.'; $('flags').innerHTML = err ? `<div class="flag bad">${err}</div>` : ''; return; }
+    $('stepline').innerHTML = 'Walk planned. <b>Tap again</b> to start a new one.';
+    $('r-dist').textContent = r.dist < 1000 ? `${Math.round(r.dist)} m` : `${(r.dist / 1000).toFixed(2)} km`;
+    $('r-time').textContent = fmtMin(r.time);
+    $('r-up').textContent = `+${r.up.toFixed(0)} m`; $('r-down').textContent = `−${r.down.toFixed(0)} m`;
+    $('r-max').textContent = `${r.maxs.toFixed(0)}°`;
+    const w = S.data.weather[String($('sol').value)], start = toMin($('start').value), end = start + r.time / 60;
+    $('r-end').textContent = hhmm(end);
+    if (w && w.sunset) { const ss = toMin(w.sunset); flags.push(end > ss - 60 ? ['bad', `Back at ${hhmm(end)}, too close to sunset (${w.sunset}). Leave earlier.`] : ['ok', `Back ${fmtMin((ss - end) * 60)} before sunset (${w.sunset}).`]); }
+    flags.push(r.maxs > 20 ? ['warn', `Steepest stretch is ${r.maxs.toFixed(0)}°. Plan rest stops.`] : ['ok', 'No stretch steeper than 20°.']);
+    const dose = S.data.radiation.msv_per_day * (r.time / 3600) / 24.66;
+    flags.push(['ok', `Radiation for this walk: about ${(dose * 1000).toFixed(0)} µSv (Curiosity RAD average), well below a chest CT scan.`]);
+    $('flags').innerHTML = flags.map(([c, t]) => `<div class="flag ${c}">${t}</div>`).join('');
+    profileChart(r.prof);
+  }
+
+  function profileChart(prof) {
+    const W = 300, Hh = 120, pl = 34, pr = 6, pt = 8, pb = 20;
+    const d = prof[prof.length - 1][0] || 1, hs = prof.map((p) => p[1]), lo = Math.min(...hs), hi = Math.max(...hs), span = Math.max(hi - lo, 2);
+    const X = (v) => pl + (v / d) * (W - pl - pr), Y = (v) => pt + (1 - (v - lo) / span) * (Hh - pt - pb);
+    const step = Math.max(1, Math.floor(prof.length / 200)), pts = prof.filter((_, i) => i % step === 0 || i === prof.length - 1);
+    const line = pts.map((p) => `${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(' ');
+    const ticksY = [lo, lo + span / 2, lo + span].map((v) => `<text x="${pl - 4}" y="${Y(v) + 3}" text-anchor="end">${(v + S.data.window.height_min).toFixed(0)}</text><line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" />`).join('');
+    $('profile').innerHTML = `<div class="label" style="margin-bottom:4px">Height along the walk (m)</div>
+      <svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Height profile of the walk">
+        <g font-family="Martian Mono, monospace" font-size="8" fill="var(--muted)">${ticksY}
+        <text x="${pl}" y="${Hh - 6}">0</text><text x="${W - pr}" y="${Hh - 6}" text-anchor="end">${d < 1000 ? Math.round(d) + ' m' : (d / 1000).toFixed(2) + ' km'}</text></g>
+        <polygon points="${pl},${Y(lo)} ${line} ${X(d)},${Y(lo)}" fill="var(--route)" fill-opacity="0.18" />
+        <polyline points="${line}" fill="none" stroke="var(--route)" stroke-width="2" />
+        <circle cx="${X(d)}" cy="${Y(prof[prof.length - 1][1])}" r="3" fill="var(--route)" /></svg>`;
+  }
+
+  function conditions() {
+    const sol = String($('sol').value), w = S.data.weather[sol];
+    $('cond-title').textContent = `Conditions on sol ${sol}`;
+    if (!w) { $('conditions').innerHTML = ''; $('cond-note').textContent = `Curiosity has no weather record for sol ${sol}. Try a nearby sol.`; return; }
+    const f = (label, val) => `<div class="fact"><small>${label}</small><b>${val}</b></div>`;
+    $('conditions').innerHTML = f('Air, low to high', `${w.min_temp} to ${w.max_temp} °C`) + f('Ground, low to high', `${w.min_gts_temp} to ${w.max_gts_temp} °C`) +
+      f('Air pressure', `${w.pressure} Pa`) + f('Sky / UV', `${w.atmo_opacity || '–'} / ${w.local_uv_irradiance_index || '–'}`) +
+      f('Sunrise', w.sunrise || '–') + f('Sunset', w.sunset || '–');
+    $('cond-note').textContent = `Measured by Curiosity's REMS weather station on ${w.terrestrial_date} (Earth date), Mars season: ${w.season}.`;
+    if (S.route) showResult(S.route);
+  }
+
+  // ---------------- 3D terrain ----------------
+  function makeOrbit(canvas) {
+    const r = new THREE.WebGLRenderer({ canvas, antialias: true }); r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    const scene = new THREE.Scene(); scene.background = new THREE.Color(css('--view') || '#1c232c');
+    const cam = new THREE.PerspectiveCamera(50, 1, 0.5, 20000), ctl = new THREE.OrbitControls(cam, canvas);
+    ctl.enableDamping = true; ctl.maxPolarAngle = Math.PI * 0.49;
+    scene.add(new THREE.HemisphereLight(0xfff1e0, 0x3a3026, 0.9));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.7); sun.position.set(-1, 1.2, -0.6); scene.add(sun);
+    const fit = () => { const b = canvas.parentElement.getBoundingClientRect(); r.setSize(b.width, b.height, false); cam.aspect = b.width / b.height; cam.updateProjectionMatrix(); };
+    new ResizeObserver(fit).observe(canvas.parentElement); fit();
+    let on = true; (function loop() { if (on && canvas.offsetParent) { ctl.update(); r.render(scene, cam); } requestAnimationFrame(loop); })();
+    return { r, scene, cam, ctl };
+  }
+
+  function initTerrain3d() {
+    if (S.t3d) return;
+    const step = 2, C = S.cols, R = S.rows, g = S.g, nx = Math.floor(C / step), ny = Math.floor(R / step);
+    const o = makeOrbit($('terrain3d'));
+    const geom = new THREE.PlaneGeometry((nx - 1) * step * g, (ny - 1) * step * g, nx - 1, ny - 1);
+    geom.rotateX(-Math.PI / 2);
+    const pos = geom.attributes.position, mid = S.H[(R >> 1) * C + (C >> 1)];
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const h = S.H[(j * step) * C + i * step]; pos.setY(j * nx + i, isFinite(h) ? h - mid : 0);
+    }
+    geom.computeVertexNormals();
+    const tex = new THREE.Texture(S.img); tex.needsUpdate = true; tex.anisotropy = 4;
+    const mesh = new THREE.Mesh(geom, new THREE.MeshLambertMaterial({ map: tex }));
+    const holder = new THREE.Group(); holder.add(mesh); o.scene.add(holder);
+    const half = (nx - 1) * step * g / 2;
+    const at = (x, y, lift = 0) => { const i = Math.min(C - 1, Math.max(0, Math.round(x / g))), j = Math.min(R - 1, Math.max(0, Math.round(y / g))); return new THREE.Vector3(x - half, (S.H[j * C + i] - mid) + lift, y - half); };
+    const pinMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(css('--accent')) });
+    S.data.closeups.forEach((c) => { const pin = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 14, 12), pinMat); pin.position.copy(at(c.x, c.y, 7)); holder.add(pin); });
+    const pathMat = new THREE.LineBasicMaterial({ color: new THREE.Color(css('--accent')) });
+    S.data.path.forEach((seg) => holder.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(seg.filter((_, k) => k % 3 === 0).map(([x, y]) => at(x, y, 1.5))), pathMat)));
+    let routeLine = null;
+    const setRoute = (r) => {
+      if (routeLine) { holder.remove(routeLine); routeLine = null; }
+      if (!r) return;
+      const ptsR = r.cells.filter((_, k) => k % 2 === 0).map((i) => at((i % C) * g, ((i / C) | 0) * g, 2.5));
+      routeLine = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ptsR), Math.min(800, ptsR.length * 2), 2.2, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(css('--route')) }));
+      holder.add(routeLine);
+    };
+    const exag = () => { holder.scale.y = +$('exag').value; $('exagv').textContent = $('exag').value + '×'; };
+    $('exag').addEventListener('input', exag); exag();
+    o.cam.position.set(-half * 0.55, half * 0.75, half * 0.95); o.ctl.target.set(0, 0, 0); o.ctl.maxDistance = half * 4;
+    S.t3d = { setRoute }; setRoute(S.route); $('status3d').remove();
+  }
+
+  // ---------------- Navcam close-ups (one stop, or all stops placed where they really are) ----------------
+  const closeCache = {};
+  async function loadStop(c) {
+    if (closeCache[c.folder]) return closeCache[c.folder];
+    const [meta, b64] = await Promise.all([fetch(c.folder + '/scene.json').then((r) => r.json()), fetch(c.folder + '/scene.b64.txt').then((r) => r.text())]);
+    const buf = b64ToU8(b64).buffer, n = meta.counts.vertices, nf = meta.counts.faces;
+    let off = 0; const p16 = new Int16Array(buf, off, n * 3); off += n * 6;
+    const gray = new Uint8Array(buf, off, n); off += 2 * n; const slope = new Uint8Array(buf, off, n); off += n;
+    const idx = new Uint32Array(buf.slice(off, off + nf * 12));
+    const pos = new Float32Array(n * 3); for (let i = 0; i < n * 3; i++) pos[i] = p16[i] / 100;
+    const geom = new THREE.BufferGeometry(); geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geom.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3)); geom.setIndex(new THREE.BufferAttribute(idx, 1)); geom.computeVertexNormals();
+    return (closeCache[c.folder] = { geom, gray, slope, n, meta });
+  }
+  function paintStop(sc, slopeMode) {
+    const col = sc.geom.attributes.color.array;
+    for (let i = 0; i < sc.n; i++) {
+      let rgb;
+      if (!slopeMode) { const g = sc.gray[i] / 255; rgb = [g, g, g]; }
+      else { const v = sc.slope[i]; rgb = (v === 255 ? [125, 135, 145] : SLOPE_COL.find(([lim]) => v < lim)[1]).map((x) => x / 255); }
+      col[i * 3] = rgb[0]; col[i * 3 + 1] = rgb[1]; col[i * 3 + 2] = rgb[2];
+    }
+    sc.geom.attributes.color.needsUpdate = true;
+  }
+  async function showClose(key) {
+    const C = S.close, cs = S.data.closeups;
+    const list = key === 'all' ? cs : cs.filter((c) => String(c.sol) === key);
+    if (!list.length) return;
+    $('statusclose').hidden = false; $('statusclose').textContent = 'Loading Navcam ground model…';
+    try {
+      const scenes = await Promise.all(list.map(loadStop));
+      while (C.group.children.length) C.group.remove(C.group.children[0]);
+      const ref = list.find((c) => c.sol === 1100) || list[0];
+      list.forEach((c, k) => {
+        const sc = scenes[k]; paintStop(sc, C.slopeMode);
+        const dx = c.x - ref.x, dz = c.y - ref.y, dy = c.elev - ref.elev;   // map metres: x east, y south
+        const mesh = new THREE.Mesh(sc.geom, C.mat); mesh.position.set(dx, dy, dz); C.group.add(mesh);
+        const rover = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(3.0, 2.2, 2.8)), C.lineMat);
+        rover.position.set(dx, dy + 1.1, dz); rover.rotation.y = Math.PI / 2 - sc.meta.rover_heading * Math.PI / 180; C.group.add(rover);
+      });
+      const far = Math.max(14, ...list.map((c) => Math.hypot(c.x - ref.x, c.y - ref.y)));
+      const mx = list.reduce((t, c) => t + c.x - ref.x, 0) / list.length, mz = list.reduce((t, c) => t + c.y - ref.y, 0) / list.length;
+      const r = key === 'all' ? far * 0.55 : 0;   // aim at the middle of all stops
+      C.o.ctl.target.set(mx, -1, mz); C.o.cam.position.set(mx - 0.45 * r - 9, 0.5 * r + 11, mz + 0.6 * r + 13); C.o.ctl.maxDistance = far * 4 + 60;
+      $('close-report').hidden = key === 'all'; if (key !== 'all') $('close-report').href = list[0].folder + '/index.html';
+      $('statusclose').hidden = true;
+    } catch (e) { $('statusclose').textContent = 'The close-up could not load. Reload the page to try again.'; }
+  }
+  function initClose(key) {
+    if (!S.close) {
+      const o = makeOrbit($('close3d')), group = new THREE.Group(); o.scene.add(group);
+      S.close = { o, group, slopeMode: false, mat: new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }),
+                  lineMat: new THREE.LineBasicMaterial({ color: new THREE.Color(css('--accent')) }) };
+      $('close-mode').addEventListener('click', () => {
+        S.close.slopeMode = !S.close.slopeMode; Object.values(closeCache).forEach((sc) => paintStop(sc, S.close.slopeMode));
+        $('close-mode').textContent = S.close.slopeMode ? 'Show photo' : 'Show walk slope';
+      });
+      $('close-pick').addEventListener('change', () => showClose($('close-pick').value));
+    }
+    if (key) $('close-pick').value = key;
+    showClose($('close-pick').value);
+  }
+  function openClose(key) {
+    document.querySelector('#tab-close').click();
+    initClose(String(key));
+  }
+  function listCloseups() {
+    const cs = S.data.closeups;
+    S.closeSols = new Set(cs.map((c) => c.sol));
+    $('close-pick').innerHTML = cs.map((c) => `<option value="${c.sol}">sol ${c.sol}</option>`).join('') + (cs.length > 1 ? '<option value="all">All stops together</option>' : '');
+    const def = cs.find((c) => c.sol === 1100) || cs[0]; if (def) $('close-pick').value = String(def.sol);
+    $('closeup-list').innerHTML = cs.map((c) => `<button data-sol="${c.sol}">Sol ${c.sol}<span>${c.photos} photos · ${Math.round(c.area_m2)} m² · ${(c.error * 100).toFixed(1)}% error</span></button>`).join('') +
+      (cs.length > 1 ? '<button data-sol="all">All stops together<span>placed by real position</span></button>' : '');
+    $('closeup-list').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => openClose(b.dataset.sol)));
+  }
+
+  // ---------------- tabs + controls ----------------
+  document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+    ['map', 'terrain', 'close'].forEach((v) => { $('view-' + v).hidden = v !== b.dataset.view; });
+    if (b.dataset.view === 'terrain' && S.H) setTimeout(initTerrain3d, 10);
+    if (b.dataset.view === 'close') initClose();
+    if (b.dataset.view === 'map') fitMap();
+  }));
+  $('maxslope').addEventListener('input', () => { $('maxslopev').textContent = $('maxslope').value + '°'; });
+  $('maxslope').addEventListener('change', () => { if (S.picks.length === 2) runPlan(); });
+  $('sol').addEventListener('change', conditions);
+  $('start').addEventListener('change', () => { if (S.route) showResult(S.route); });
+  $('lay-slope').addEventListener('change', drawMap); $('lay-path').addEventListener('change', drawMap);
+  $('clear').addEventListener('click', () => { S.picks = []; S.route = null; showResult(null); drawMap(); if (S.t3d) S.t3d.setRoute(null); });
+  $('example').addEventListener('click', example);
+  function example() {
+    const s = S.data.stops, home = S.data.closeups.find((c) => c.sol === 1100) || S.data.closeups[0] || s[0], a = s.find((p) => p.sol === home.sol) || home;
+    const far = s.filter((p) => Math.hypot(p.x - a.x, p.y - a.y) > 350).sort((p, q) => Math.abs(Math.hypot(p.x - a.x, p.y - a.y) - 600) - Math.abs(Math.hypot(q.x - a.x, q.y - a.y) - 600))[0] || s[0];
+    S.picks = [{ x: a.x + 6, y: a.y + 6 }, { x: far.x, y: far.y }]; runPlan();
+  }
+
+  // ---------------- load ----------------
+  async function start() {
+    if (!window.THREE || !THREE.OrbitControls) { $('status').textContent = 'The 3D library did not load. Check your connection and reload the page.'; return; }
+    try {
+      const [data, b64] = await Promise.all([fetch('data.json').then((r) => r.json()), fetch('terrain.b64.txt').then((r) => r.text())]);
+      S.data = data; S.closeSols = new Set(data.closeups.map((c) => c.sol)); S.cols = data.window.cols; S.rows = data.window.rows; S.g = data.window.grid_m;
+      prepareTerrain(b64ToU8(b64));
+      S.img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = 'map.jpg'; });
+    } catch (e) { $('status').textContent = 'The orbital data could not be loaded. Reload the page to try again.'; return; }
+    $('status').remove();
+    listCloseups(); bindMap(); new ResizeObserver(fitMap).observe($('view-map')); fitMap(); conditions(); example();
+    window.marswalk = { plan, S, example, tapAt, toScreen };
+  }
+  start();
+})();
+</script>

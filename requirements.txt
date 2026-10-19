@@ -1,0 +1,11 @@
+# pipeline
+numpy
+scipy
+matplotlib
+pillow
+torch
+transformers
+# notebooks (optional)
+nbformat
+plotly
+opencv-python-headless
