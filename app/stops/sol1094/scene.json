@@ -38,8 +38,8 @@
   },
   {
    "stereo_cover": 0.7673,
-   "da_absrel": 0.0423,
-   "da_within25": 0.99,
+   "da_absrel": 0.0422,
+   "da_within25": 0.9901,
    "da_absrel_plain": 0.0439,
    "align": "power",
    "filled_cover": 0.9764,
@@ -51,7 +51,7 @@
    "stereo_cover": 0.4444,
    "da_absrel": 0.0148,
    "da_within25": 1.0,
-   "da_absrel_plain": 0.0151,
+   "da_absrel_plain": 0.015,
    "align": "weighted",
    "filled_cover": 0.6208,
    "id": "NLB_494615198RASLF0492236NCAM00353M1",
@@ -72,21 +72,21 @@
   {
    "stereo_cover": 0.4483,
    "da_absrel": 0.074,
-   "da_within25": 0.931,
+   "da_within25": 0.9301,
    "da_absrel_plain": 0.074,
    "align": "plain",
-   "filled_cover": 0.6779,
+   "filled_cover": 0.6783,
    "id": "NLB_494615915RASLF0492236NCAM00265M1",
    "azimuth": 129.9599,
    "elevation": -17.0383
   },
   {
    "stereo_cover": 0.6592,
-   "da_absrel": 0.0433,
-   "da_within25": 0.9746,
-   "da_absrel_plain": 0.0433,
+   "da_absrel": 0.0431,
+   "da_within25": 0.975,
+   "da_absrel_plain": 0.0431,
    "align": "plain",
-   "filled_cover": 0.9122,
+   "filled_cover": 0.912,
    "id": "NLB_494615939RASLF0492236NCAM00265M1",
    "azimuth": 159.5669,
    "elevation": -16.9469
@@ -94,30 +94,30 @@
   {
    "stereo_cover": 0.6846,
    "da_absrel": 0.0488,
-   "da_within25": 0.9944,
-   "da_absrel_plain": 0.0538,
+   "da_within25": 0.9943,
+   "da_absrel_plain": 0.054,
    "align": "weighted",
-   "filled_cover": 0.8732,
+   "filled_cover": 0.8733,
    "id": "NLB_494615972RASLF0492236NCAM00265M1",
    "azimuth": 189.765,
    "elevation": -16.9051
   },
   {
    "stereo_cover": 0.6542,
-   "da_absrel": 0.0272,
-   "da_within25": 0.9903,
-   "da_absrel_plain": 0.0272,
+   "da_absrel": 0.0273,
+   "da_within25": 0.9906,
+   "da_absrel_plain": 0.0273,
    "align": "plain",
-   "filled_cover": 0.8742,
+   "filled_cover": 0.8741,
    "id": "NLB_494615996RASLF0492236NCAM00265M1",
    "azimuth": 219.8328,
    "elevation": -16.8829
   },
   {
    "stereo_cover": 0.6479,
-   "da_absrel": 0.0301,
-   "da_within25": 0.9868,
-   "da_absrel_plain": 0.0301,
+   "da_absrel": 0.0302,
+   "da_within25": 0.9863,
+   "da_absrel_plain": 0.0302,
    "align": "plain",
    "filled_cover": 0.8491,
    "id": "NLB_494616021RASLF0492236NCAM00265M1",
@@ -181,11 +181,11 @@
   },
   {
    "stereo_cover": 0.6131,
-   "da_absrel": 0.0522,
-   "da_within25": 0.9687,
-   "da_absrel_plain": 0.0522,
+   "da_absrel": 0.0521,
+   "da_within25": 0.9689,
+   "da_absrel_plain": 0.0521,
    "align": "plain",
-   "filled_cover": 0.8132,
+   "filled_cover": 0.8131,
    "id": "NLB_494616214RASLF0492236NCAM07753M1",
    "azimuth": 279.9596,
    "elevation": -16.9283
@@ -193,19 +193,19 @@
   {
    "stereo_cover": 0.616,
    "da_absrel": 0.0566,
-   "da_within25": 0.941,
+   "da_within25": 0.9408,
    "da_absrel_plain": 0.0566,
    "align": "plain",
-   "filled_cover": 0.735,
+   "filled_cover": 0.7351,
    "id": "NLB_494616245RASLF0492236NCAM07753M1",
    "azimuth": 309.6183,
    "elevation": -16.9028
   },
   {
    "stereo_cover": 0.501,
-   "da_absrel": 0.0504,
-   "da_within25": 0.9682,
-   "da_absrel_plain": 0.0504,
+   "da_absrel": 0.0507,
+   "da_within25": 0.968,
+   "da_absrel_plain": 0.0507,
    "align": "plain",
    "filled_cover": 0.7235,
    "id": "NLB_494616276RASLF0492236NCAM07753M1",
@@ -214,11 +214,11 @@
   },
   {
    "stereo_cover": 0.2022,
-   "da_absrel": 0.0638,
-   "da_within25": 0.9769,
-   "da_absrel_plain": 0.064,
+   "da_absrel": 0.0637,
+   "da_within25": 0.9773,
+   "da_absrel_plain": 0.0638,
    "align": "power",
-   "filled_cover": 0.7758,
+   "filled_cover": 0.7755,
    "id": "NLB_494616367RASLF0492236NCAM07753M1",
    "azimuth": 9.9485,
    "elevation": -16.9289
@@ -226,42 +226,403 @@
   {
    "stereo_cover": 0.3068,
    "da_absrel": 0.0613,
-   "da_within25": 0.9787,
+   "da_within25": 0.9784,
    "da_absrel_plain": 0.0613,
    "align": "plain",
-   "filled_cover": 0.5255,
+   "filled_cover": 0.5249,
    "id": "NLB_494616397RASLF0492236NCAM07753M1",
    "azimuth": 39.6429,
    "elevation": -16.9661
   },
   {
    "stereo_cover": 0.4788,
-   "da_absrel": 0.0725,
-   "da_within25": 0.9198,
-   "da_absrel_plain": 0.0725,
+   "da_absrel": 0.0727,
+   "da_within25": 0.9196,
+   "da_absrel_plain": 0.0727,
    "align": "plain",
-   "filled_cover": 0.6829,
+   "filled_cover": 0.683,
    "id": "NLB_494616428RASLF0492236NCAM07753M1",
    "azimuth": 69.7307,
    "elevation": -16.9404
   },
   {
    "stereo_cover": 0.3231,
-   "da_absrel": 0.1086,
-   "da_within25": 0.9309,
-   "da_absrel_plain": 0.1086,
+   "da_absrel": 0.1084,
+   "da_within25": 0.9312,
+   "da_absrel_plain": 0.1084,
    "align": "plain",
-   "filled_cover": 0.596,
+   "filled_cover": 0.5959,
    "id": "NLB_494616459RASLF0492236NCAM07753M1",
    "azimuth": 99.7237,
    "elevation": -16.959
   }
  ],
  "show_frame": 11,
+ "depth_model": "Depth Anything V2 Small (pretrained)",
+ "hazards": [
+  {
+   "east": 0.75,
+   "south": -10.46,
+   "height": 0.86,
+   "area": 2.43,
+   "estimated": true
+  },
+  {
+   "east": 16.14,
+   "south": -15.91,
+   "height": 0.82,
+   "area": 2.16,
+   "estimated": true
+  },
+  {
+   "east": 12.64,
+   "south": 11.9,
+   "height": 0.76,
+   "area": 3.938,
+   "estimated": true
+  },
+  {
+   "east": 15.22,
+   "south": 15.66,
+   "height": 0.71,
+   "area": 3.825,
+   "estimated": true
+  },
+  {
+   "east": -17.43,
+   "south": -10.24,
+   "height": 0.71,
+   "area": 1.935,
+   "estimated": true
+  },
+  {
+   "east": 9.09,
+   "south": 12.92,
+   "height": 0.65,
+   "area": 1.777,
+   "estimated": true
+  },
+  {
+   "east": 11.26,
+   "south": 18.44,
+   "height": 0.61,
+   "area": 2.137,
+   "estimated": true
+  },
+  {
+   "east": 19.82,
+   "south": -4.5,
+   "height": 0.6,
+   "area": 1.53,
+   "estimated": true
+  },
+  {
+   "east": 17.22,
+   "south": 11.96,
+   "height": 0.6,
+   "area": 3.015,
+   "estimated": false
+  },
+  {
+   "east": 1.66,
+   "south": 1.44,
+   "height": 0.57,
+   "area": 1.485,
+   "estimated": true
+  },
+  {
+   "east": -20.78,
+   "south": -10.37,
+   "height": 0.55,
+   "area": 1.08,
+   "estimated": true
+  },
+  {
+   "east": 0.16,
+   "south": -4.52,
+   "height": 0.54,
+   "area": 1.845,
+   "estimated": true
+  },
+  {
+   "east": 21.29,
+   "south": 7.42,
+   "height": 0.46,
+   "area": 1.777,
+   "estimated": true
+  },
+  {
+   "east": 1.8,
+   "south": -2.75,
+   "height": 0.44,
+   "area": 1.867,
+   "estimated": true
+  },
+  {
+   "east": 6.81,
+   "south": 21.39,
+   "height": 0.44,
+   "area": 1.215,
+   "estimated": true
+  },
+  {
+   "east": 13.72,
+   "south": 18.35,
+   "height": 0.4,
+   "area": 0.135,
+   "estimated": true
+  },
+  {
+   "east": 0.59,
+   "south": -7.16,
+   "height": 0.39,
+   "area": 0.112,
+   "estimated": true
+  },
+  {
+   "east": 17.15,
+   "south": 9.97,
+   "height": 0.39,
+   "area": 0.36,
+   "estimated": true
+  },
+  {
+   "east": 13.99,
+   "south": 17.02,
+   "height": 0.38,
+   "area": 0.09,
+   "estimated": true
+  },
+  {
+   "east": 8.81,
+   "south": 21.72,
+   "height": 0.38,
+   "area": 0.517,
+   "estimated": true
+  },
+  {
+   "east": 19.0,
+   "south": 9.16,
+   "height": 0.37,
+   "area": 0.81,
+   "estimated": true
+  },
+  {
+   "east": -19.98,
+   "south": -12.12,
+   "height": 0.36,
+   "area": 0.067,
+   "estimated": true
+  },
+  {
+   "east": 4.05,
+   "south": 17.78,
+   "height": 0.36,
+   "area": 0.382,
+   "estimated": true
+  },
+  {
+   "east": 7.01,
+   "south": 11.47,
+   "height": 0.35,
+   "area": 0.36,
+   "estimated": true
+  },
+  {
+   "east": 1.62,
+   "south": 15.99,
+   "height": 0.34,
+   "area": 0.315,
+   "estimated": true
+  },
+  {
+   "east": 14.11,
+   "south": 17.57,
+   "height": 0.34,
+   "area": 0.112,
+   "estimated": true
+  },
+  {
+   "east": 23.28,
+   "south": -2.94,
+   "height": 0.34,
+   "area": 0.495,
+   "estimated": true
+  },
+  {
+   "east": 21.24,
+   "south": -2.93,
+   "height": 0.33,
+   "area": 0.427,
+   "estimated": true
+  },
+  {
+   "east": 21.57,
+   "south": 0.32,
+   "height": 0.33,
+   "area": 0.067,
+   "estimated": true
+  },
+  {
+   "east": 13.9,
+   "south": 4.93,
+   "height": 0.33,
+   "area": 0.112,
+   "estimated": true
+  },
+  {
+   "east": -21.36,
+   "south": 10.47,
+   "height": 0.32,
+   "area": 0.202,
+   "estimated": true
+  },
+  {
+   "east": 13.12,
+   "south": 18.97,
+   "height": 0.3,
+   "area": 0.067,
+   "estimated": true
+  },
+  {
+   "east": 2.02,
+   "south": -8.48,
+   "height": 0.3,
+   "area": 0.067,
+   "estimated": true
+  },
+  {
+   "east": 18.15,
+   "south": -4.12,
+   "height": 0.3,
+   "area": 0.045,
+   "estimated": true
+  },
+  {
+   "east": 14.25,
+   "south": -1.95,
+   "height": 0.3,
+   "area": 0.09,
+   "estimated": true
+  },
+  {
+   "east": 14.65,
+   "south": -14.09,
+   "height": 0.29,
+   "area": 0.112,
+   "estimated": true
+  },
+  {
+   "east": 8.22,
+   "south": 19.34,
+   "height": 0.29,
+   "area": 0.158,
+   "estimated": true
+  },
+  {
+   "east": 13.65,
+   "south": -13.58,
+   "height": 0.28,
+   "area": 0.045,
+   "estimated": true
+  },
+  {
+   "east": -22.35,
+   "south": -5.92,
+   "height": 0.28,
+   "area": 0.045,
+   "estimated": true
+  },
+  {
+   "east": 14.2,
+   "south": -13.55,
+   "height": 0.28,
+   "area": 0.158,
+   "estimated": true
+  },
+  {
+   "east": 22.05,
+   "south": 0.3,
+   "height": 0.27,
+   "area": 0.09,
+   "estimated": true
+  },
+  {
+   "east": 5.97,
+   "south": 18.78,
+   "height": 0.27,
+   "area": 0.067,
+   "estimated": true
+  },
+  {
+   "east": -12.28,
+   "south": 16.97,
+   "height": 0.27,
+   "area": 0.067,
+   "estimated": true
+  },
+  {
+   "east": 23.93,
+   "south": -1.2,
+   "height": 0.27,
+   "area": 0.045,
+   "estimated": true
+  },
+  {
+   "east": -22.05,
+   "south": -7.58,
+   "height": 0.26,
+   "area": 0.09,
+   "estimated": true
+  },
+  {
+   "east": -21.6,
+   "south": -5.62,
+   "height": 0.26,
+   "area": 0.045,
+   "estimated": true
+  },
+  {
+   "east": 5.68,
+   "south": -10.91,
+   "height": 0.26,
+   "area": 0.112,
+   "estimated": false
+  },
+  {
+   "east": 5.62,
+   "south": 21.3,
+   "height": 0.26,
+   "area": 0.045,
+   "estimated": true
+  },
+  {
+   "east": 11.77,
+   "south": 20.7,
+   "height": 0.26,
+   "area": 0.045,
+   "estimated": true
+  },
+  {
+   "east": 6.67,
+   "south": 22.95,
+   "height": 0.26,
+   "area": 0.045,
+   "estimated": true
+  },
+  {
+   "east": -21.6,
+   "south": -7.73,
+   "height": 0.25,
+   "area": 0.045,
+   "estimated": true
+  }
+ ],
+ "hazard_rule": "patches at least 0.25 m above the ground within ~1.5 m",
  "counts": {
-  "vertices": 79616,
-  "faces": 157682,
-  "faces_stereo": 111751
+  "vertices": 79487,
+  "faces": 157403,
+  "faces_stereo": 111624
  },
  "layout": [
   "pos:int16x3 cm",
@@ -273,30 +634,30 @@
  "frame_face_ranges": [
   [
    0,
-   111751,
-   45931
+   111624,
+   45779
   ]
  ],
  "map": {
   "cell": 0.25,
   "radius": 24.0,
-  "height_min": -2.596920338798972,
-  "height_max": 2.6777072802422537,
-  "area_m2": 1868.125,
+  "height_min": -2.5960909724773322,
+  "height_max": 2.6771754086017605,
+  "area_m2": 1869.1875,
   "slope_share": {
-   "under15": 0.874080553457119,
-   "15to25": 0.08297880799968192,
-   "over25": 0.04294063854319908
+   "under15": 0.8749205087440382,
+   "15to25": 0.08191573926868044,
+   "over25": 0.043163751987281396
   },
-  "da_only_share": 0.2366677818668451
+  "da_only_share": 0.23683418597652722
  },
  "summary": {
-  "median_da_absrel": 0.0433,
+  "median_da_absrel": 0.0431,
   "median_da_absrel_plain": 0.0439,
-  "worst_da_absrel": 0.1086,
-  "worst_da_absrel_plain": 0.1086,
+  "worst_da_absrel": 0.1084,
+  "worst_da_absrel_plain": 0.1084,
   "mean_stereo_cover": 0.5414666666666668,
-  "mean_filled_cover": 0.8033523809523809,
+  "mean_filled_cover": 0.8033190476190477,
   "frames_with_stereo": 21
  }
 }

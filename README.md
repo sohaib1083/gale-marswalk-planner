@@ -2,12 +2,20 @@
 
 Plan an astronaut's walk on real Mars terrain, and see the ground at Curiosity's stops in 3D.
 
-- **Orbital map + 3D terrain** of a 2 km × 2 km patch of Gale Crater (USGS/HiRISE, 1 m heights, 25 cm photo).
+**Live:** https://sohaib1083.github.io/gale-marswalk-planner/app/ · **Status, results and roadmap:** [docs/STATUS.md](docs/STATUS.md)
+
+- **Four zoom levels in one app:**
+  1. A Mars globe (Viking colour mosaic, 9 landing sites).
+  2. Gale Crater in 3D (USGS heights every 50 m, with Curiosity's whole route since 2012).
+  3. A 2 km planning area (1 m heights, 25 cm HiRISE photo).
+  4. Ground close-ups at Curiosity's stops (15 cm).
 - **Route planner:** tap a start and an end; it finds the quickest walk that stays off steep ground, then gives
   distance, time on foot, climb, steepest step, a height profile, a sunset check and the radiation dose.
 - **Conditions:** Curiosity's own weather (REMS) for any sol, and radiation (RAD).
 - **Ground close-ups:** Curiosity's Navcam photos at each stop turned into 3D ground. Stereo is used where NASA has
-  it, and Depth Anything V2 fills the gaps. Open one stop, or all stops placed where they really are.
+  it, and Depth Anything V2 fills the gaps. The close-ups also sit inside the orbital 3D terrain.
+- **Hazards:** rocks and ledges at least 25 cm tall, found in the close-ups. Routes go round rocks over 50 cm and
+  count the smaller ones they step past.
 
 Built by the AstroNox team for NASA Space Apps 2026 (Karachi), challenge *Interplanetary Survival Guide:
 Martian Map*. This is a **rehearsal build** (Oct 2026). The hackathon rules say project work starts Sat 14 Nov,
@@ -47,6 +55,33 @@ The download is the slow part, at 1–8 MB/s from NASA's server. Run it on a clo
 big batches; the GPU work is small. Which stops matter? The ones along the walk you want to show.
 Curiosity's stops inside the map window are in `app/data.json` → `stops`.
 
+## Fine-tune the depth model (and check it is worth it)
+
+```
+python3 navcam3d/fetch_stop.py 520 1400 700                          # training stops, far from the test area
+python3 navcam3d/finetune_depth.py --train 520 1400 700 --test 1094 1098 1100
+python3 navcam3d/build_stop.py 1100 --model data/models/da_v2_small_navcam.pt   # only if it won
+```
+
+The result table lands in [docs/results/finetune.md](docs/results/finetune.md). It runs on a 4 GB laptop GPU or a
+free Colab T4.
+
+## Tests
+
+```
+pip install -r requirements-dev.txt && pytest -q        # NASA reader, camera model, scaling, hazards, TIFF rebuild
+node --test app/tests/                                  # route planner
+```
+
+CI (`.github/workflows/ci.yml`) runs both on every push. Pushing workflow files needs the GitHub token's
+`workflow` permission: `gh auth refresh -h github.com -s workflow`.
+
+## Demo video (30 s, as Space Apps asks)
+
+```
+python3 tools/record_demo.py          # drives the real app in headless Chromium -> docs/media/demo_30s.mp4
+```
+
 ## Rebuild the orbital map for another place in Gale
 
 ```
@@ -82,9 +117,12 @@ camera model (CAHV) + rover position from the label ──► every pixel become
 
 | Path | What |
 |---|---|
-| `app/` | The planner (single page, three.js). `stops/sol<N>/` holds each stop's 3D model and report page |
+| `app/` | The planner (single page, three.js). `planner.js` = routing (tested in `app/tests/`); `world/` = globe and crater data; `stops/sol<N>/` = each stop's 3D model and report page |
 | `navcam3d/` | Rover photos → 3D: `fetch_stop.py`, `build_stop.py`, `pds.py` (NASA file reader, camera model), `stop_report.html` |
-| `orbital/` | Orbital map: `fetch_orbital.py` (range-reads USGS mosaics), `build_app_data.py` (map, heights, path, weather, stop list) |
+| `orbital/` | `fetch_orbital.py` (2 km planning area from USGS mosaics, range reads), `fetch_context.py` (globe + whole-crater levels), `build_app_data.py` (map, heights, path, weather, stops, hazards) |
+| `navcam3d/align.py`, `finetune_depth.py` | Depth scaling + hazard finder (no torch needed); fine-tuning with a pretrained-vs-trained test |
+| `tests/`, `tools/` | Python tests; `record_demo.py` for the 30-second video |
+| `docs/STATUS.md`, `docs/results/` | Results, honest gaps, production checklist; fine-tuning results |
 | `notebooks/` | `01_photo_to_3d.ipynb` (every step on one photo, outputs saved), `02_finetune_or_not.ipynb` |
 | `docs/learn-3d.md` | Beginner course: stereo, XYZ files, camera models, frames, Depth Anything, meshes |
 | `data/` | Downloads, caches and `.glb` models (not in git) |
@@ -96,6 +134,7 @@ camera model (CAHV) + rover position from the label ──► every pixel become
 | Navcam photos + XYZ | NASA/JPL-Caltech, MSL Navcam RDRs, PDS Imaging Node (`MSLNAV_1XXX`) |
 | Heights 1 m, photo 25 cm | USGS Astrogeology, MSL Gale merged DEM v3 and orthophoto v3 (HiRISE: NASA/JPL/University of Arizona; CTX: NASA/JPL/MSSS; HRSC: ESA/DLR/FU Berlin) |
 | Curiosity path and stops | NASA rover location feed (`mars.nasa.gov/mmgis-maps/MSL/Layers/json/`) |
+| Globe and crater colour | Viking MDIM 2.1 colour mosaic (NASA/USGS) via NASA Mars Trek tiles |
 | Weather | Curiosity REMS (Centro de Astrobiología), via `mars.nasa.gov/rss/api/?feed=weather&category=msl` |
 | Radiation | Curiosity RAD: 0.64 mSv/day on the surface (Hassler et al., *Science*, 2014) |
 | Depth model | Depth Anything V2 Small (Apache-2.0) |
@@ -106,3 +145,4 @@ camera model (CAHV) + rover position from the label ──► every pixel become
 - 1 m orbital heights miss rocks under ~2 m. Close-ups show them, but only at stops that have been built.
 - Depth Anything fills are estimates, especially far from the rover. Where any photo has stereo, stereo wins.
 - Next: the AI4Mars terrain classifier (sand / soil / bedrock / big rock) painted onto the close-ups and route cost.
+- Code: MIT ([LICENSE](LICENSE)). Data: NASA / USGS, public domain, credited above.

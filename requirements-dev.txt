@@ -1,0 +1,5 @@
+# What CI needs: the maths tests run without torch or downloads
+numpy==2.2.6
+scipy==1.15.3
+pillow==12.3.0
+pytest==9.1.1

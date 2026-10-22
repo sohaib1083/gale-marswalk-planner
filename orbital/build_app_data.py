@@ -6,6 +6,7 @@ Writes app/: map.jpg, terrain.b64.txt, data.json (lists every stop in app/stops/
 """
 import base64
 import json
+import sys
 import math
 import urllib.request
 from pathlib import Path
@@ -41,6 +42,23 @@ def to_px(lon, lat):
     """lon/lat -> metres from the window's top-left corner (x right = east, y down = south)."""
     x, y = R * math.radians(lon), R * math.radians(lat)
     return x - win["dem"]["x0"], win["dem"]["y0"] - y
+
+
+def results_summary(closeups):
+    """Headline numbers for the page, all measured by this repo's scripts."""
+    out = {"stops": len(closeups), "photos": sum(c["photos"] for c in closeups),
+           "area_m2": round(sum(c["area_m2"] for c in closeups)),
+           "rocks": sum(len(c["hazards"]) for c in closeups),
+           "tall_rocks": sum(1 for c in closeups for h in c["hazards"] if h[2] >= 0.5),
+           "median_error": float(np.median([c["error"] for c in closeups])) if closeups else None}
+    ft = ROOT / "docs" / "results" / "finetune.json"
+    if ft.exists():
+        f = json.loads(ft.read_text())
+        out["finetune"] = {"train_sols": f["train_sols"], "test_sols": f["test_sols"], "train_photos": f["train_photos"],
+                           "test_photos": f["test_photos"], "pretrained": f["pretrained"]["chosen"],
+                           "finetuned": f["finetuned"]["chosen"], "pretrained_plain": f["pretrained"]["plain"],
+                           "finetuned_plain": f["finetuned"]["plain"], "better_on": f["finetuned_better_on"]}
+    return out
 
 
 # ---- terrain grid (2 m), stored as centimetres above the lowest point ----
@@ -103,8 +121,13 @@ for sj in sorted((APP / "stops").glob("sol*/scene.json")):
     if inside(x, y):
         closeups.append({"sol": m["sol"], "folder": f"stops/{sj.parent.name}", "x": round(x, 1), "y": round(y, 1),
                          "elev": st["elev_geoid"], "photos": len(m["frames"]),
-                         "error": round(m["summary"]["median_da_absrel"], 4), "area_m2": round(m["map"]["area_m2"])})
-print(f"{len(closeups)} stops with 3D close-ups:", ", ".join(f"sol {c['sol']}" for c in closeups))
+                         "error": round(m["summary"]["median_da_absrel"], 4), "area_m2": round(m["map"]["area_m2"]),
+                         "model": m.get("depth_model", "Depth Anything V2 Small (pretrained)"),
+                         # rocks/ledges in map metres: [x, y, height above ground, 1 if estimated by Depth Anything]
+                         "hazards": [[round(x + h["east"], 2), round(y + h["south"], 2), h["height"], int(h["estimated"])]
+                                     for h in m.get("hazards", [])]})
+print(f"{len(closeups)} stops with 3D close-ups ({sum(len(c['hazards']) for c in closeups)} rocks/ledges):",
+      ", ".join(f"sol {c['sol']}" for c in closeups))
 data = {
     "window": {"lat": win["lat"], "lon": win["lon"], "size_m": size, "grid_m": GRID, "cols": w // GRID,
                "rows": h // GRID, "height_min": hmin, "map_px_m": 1,
@@ -112,6 +135,7 @@ data = {
     "stops": stops, "path": path, "weather": weather,
     "closeups": closeups,
     "radiation": {"msv_per_day": 0.64, "source": "Curiosity RAD, Hassler et al., Science 2014"},
+    "results": results_summary(closeups),
 }
 (APP / "data.json").write_text(json.dumps(data, separators=(",", ":")))
 print("app files:", ", ".join(f"{p.name} {p.stat().st_size / 1e6:.1f} MB" for p in sorted(APP.iterdir()) if p.is_file()))

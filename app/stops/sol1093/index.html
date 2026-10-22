@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Navcam Stop Model</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=Martian+Mono:wght@400;600&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a mission-ops console. The 3D view is the instrument; readouts sit in a rail beside it,
+   and the evidence (pipeline, map, per-frame scores) follows below in reading order. */
+:root {
+  --bg: #edf0f3;          /* cool regolith-grey paper */
+  --panel: #ffffff;
+  --fg: #19212b;
+  --muted: #586473;
+  --line: #cfd6de;
+  --accent: #b06a1f;      /* butterscotch: the colour of the Martian daytime sky */
+  --accent-soft: #f3e3cf;
+  --view: #1c232c;        /* the 3D viewport stays dark in both themes */
+  --view-fg: #e6ebf0;
+  --ok: #2f9e62; --warn: #d9961c; --bad: #d64541;
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Public Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --f-data: "Martian Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10151b; --panel: #171e26; --fg: #e3e8ed; --muted: #95a1af; --line: #29333e;
+    --accent: #e3a254; --accent-soft: #3a2a17; --view: #0b0f14; --view-fg: #e6ebf0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10151b; --panel: #171e26; --fg: #e3e8ed; --muted: #95a1af; --line: #29333e;
+  --accent: #e3a254; --accent-soft: #3a2a17; --view: #0b0f14; --view-fg: #e6ebf0;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font: 15px/1.55 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--f-display); font-stretch: 78%; font-weight: 750; text-wrap: balance; margin: 0; line-height: 1.05; letter-spacing: -0.01em; }
+h1 { font-size: clamp(2rem, 5vw, 3.3rem); }
+h2 { font-size: clamp(1.4rem, 2.6vw, 1.9rem); }
+p { margin: 0; max-width: 68ch; }
+.eyebrow, .label { font: 600 0.68rem/1.3 var(--f-data); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+header { display: grid; gap: 12px; }
+header .lede { color: var(--muted); font-size: 1.02rem; }
+header .eyebrow b { color: var(--accent); font-weight: 600; }
+
+/* ---------- console ---------- */
+.console { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+.viewport { position: relative; background: var(--view); min-height: 420px; height: min(68vh, 640px); }
+.viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.viewport .status { position: absolute; inset: 0; display: grid; place-items: center; color: var(--view-fg); font: 500 0.8rem var(--f-data); letter-spacing: 0.04em; text-align: center; padding: 16px; }
+.compass { position: absolute; top: 12px; left: 12px; width: 46px; height: 46px; border-radius: 50%; border: 1px solid rgba(230,235,240,.35); display: grid; place-items: center; color: var(--view-fg); font: 600 0.62rem var(--f-data); background: rgba(10,14,18,.35); }
+.compass span { display: block; transform-origin: 50% 50%; }
+.compass i { position: absolute; top: 3px; left: 50%; width: 2px; height: 14px; margin-left: -1px; background: var(--accent); border-radius: 1px; }
+.hint { position: absolute; bottom: 10px; left: 12px; right: 12px; color: rgba(230,235,240,.75); font: 0.66rem/1.4 var(--f-data); letter-spacing: 0.02em; pointer-events: none; }
+.rail { display: grid; align-content: start; gap: 20px; padding: 18px; border-left: 1px solid var(--line); min-width: 0; }
+.group { display: grid; gap: 8px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.seg button, .btn { font: 600 0.72rem var(--f-data); letter-spacing: 0.03em; padding: 9px 8px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.seg button:hover, .btn:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.switch { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; cursor: pointer; }
+.switch input { width: 18px; height: 18px; accent-color: var(--accent); }
+.legend { display: grid; gap: 4px; font-size: 0.8rem; color: var(--muted); }
+.legend div { display: flex; align-items: center; gap: 8px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.ramp { height: 10px; border-radius: 3px; background: linear-gradient(90deg, #3b5f8a, #4f8f6e, #c9b56a, #b9845a, #f2efe9); }
+.readout { display: grid; gap: 6px; padding: 12px; border-radius: 8px; background: var(--accent-soft); font-size: 0.85rem; min-height: 96px; }
+.readout dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; }
+.readout dt { color: var(--muted); }
+.readout dd { margin: 0; text-align: right; font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 0.8rem; }
+
+/* ---------- numbers ---------- */
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.stat { padding: 14px 16px 14px 0; display: grid; gap: 4px; }
+.stat + .stat { padding-left: 16px; border-left: 1px solid var(--line); }
+.stat b { font: 600 clamp(1.25rem, 2.6vw, 1.7rem)/1.1 var(--f-data); font-variant-numeric: tabular-nums; }
+.stat small { color: var(--muted); font-size: 0.8rem; }
+
+section { display: grid; gap: 16px; }
+.pipe { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.pipe figure { margin: 0; display: grid; gap: 8px; align-content: start; }
+.pipe .imgbox { aspect-ratio: 1; max-width: 100%; border-radius: 6px; overflow: hidden; background: repeating-conic-gradient(var(--line) 0 25%, transparent 0 50%) 0 0 / 14px 14px; }
+.pipe img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pipe figcaption { font-size: 0.84rem; color: var(--muted); }
+.pipe figcaption b { display: block; color: var(--fg); font: 600 0.72rem var(--f-data); letter-spacing: 0.04em; margin-bottom: 2px; }
+
+.maps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.map { margin: 0; display: grid; gap: 8px; }
+.mapbox { position: relative; aspect-ratio: 1; max-width: 100%; border-radius: 6px; overflow: hidden; background: var(--view); }
+.mapbox img { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+.rover-dot { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(10,14,18,.6); }
+.north { position: absolute; top: 8px; right: 10px; color: var(--view-fg); font: 600 0.7rem var(--f-data); }
+.scalebar { position: absolute; left: 10px; bottom: 10px; color: var(--view-fg); font: 0.62rem var(--f-data); display: grid; gap: 3px; }
+.scalebar i { display: block; height: 4px; border: 1px solid var(--view-fg); border-top: 0; }
+.map figcaption { font-size: 0.84rem; color: var(--muted); }
+
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 0.84rem; }
+th, td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+th { font: 600 0.64rem var(--f-data); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+th:first-child, td:first-child { text-align: left; }
+td { font-family: var(--f-data); font-size: 0.76rem; }
+td img { width: 44px; height: 44px; border-radius: 4px; display: block; }
+tr:last-child td { border-bottom: 0; }
+.pill { display: inline-block; padding: 2px 7px; border-radius: 99px; font-size: 0.7rem; }
+.pill.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.pill.warn { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn); }
+.pill.bad { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); }
+.pill.none { color: var(--muted); }
+
+.notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; max-width: 62ch; }
+.credit { color: var(--muted); font-size: 0.8rem; border-top: 1px solid var(--line); padding-top: 16px; }
+a { color: var(--accent); }
+
+@media (max-width: 900px) {
+  .console { grid-template-columns: minmax(0, 1fr); }
+  .rail { border-left: 0; border-top: 1px solid var(--line); }
+  .pipe { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(3) { padding-left: 0; border-left: 0; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .notes { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .maps { grid-template-columns: minmax(0, 1fr); }
+  .viewport { height: 62vh; min-height: 360px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Curiosity rover · <b id="hdr-sol">Sol 1100</b> · Gale Crater · <span id="hdr-frames">19</span> Navcam stereo frames</div>
+    <h1 id="hdr-title">Navcam Stop Model</h1>
+    <p class="lede">Curiosity's Navcam photos at one stop turned into walkable 3D ground. Stereo gives true depth where both cameras matched; Depth Anything V2 fills the gaps after being scaled to the stereo points in the same photo. Drag to orbit, scroll or pinch to zoom, tap the ground to measure.</p>
+  </header>
+
+  <div class="console">
+    <div class="viewport" id="viewport">
+      <div class="status" id="status">Loading the terrain model…</div>
+      <div class="compass" aria-hidden="true"><i id="needle"></i><span>N</span></div>
+      <div class="hint">Tap once to read a point. Tap a second point to measure the walk between them.</div>
+    </div>
+    <aside class="rail">
+      <div class="group">
+        <div class="label">Colour the ground by</div>
+        <div class="seg" role="group" aria-label="Colour mode">
+          <button id="mode-photo" aria-pressed="true" data-mode="photo">Photo</button>
+          <button id="mode-height" aria-pressed="false" data-mode="height">Height</button>
+          <button id="mode-slope" aria-pressed="false" data-mode="slope">Walk slope</button>
+          <button id="mode-source" aria-pressed="false" data-mode="source">Source</button>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <label class="switch" for="toggle-da"><input type="checkbox" id="toggle-da" checked> Fill stereo holes with Depth Anything</label>
+      <div class="group">
+        <div class="label">Readout</div>
+        <div class="readout" id="readout"><span>Tap the ground to see distance from the rover, height and slope.</span></div>
+        <button class="btn" id="reset">Reset view</button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="stats" id="stats">
+    <div class="stat"><span class="label">Ground covered</span><b id="s-area">–</b><small>square metres, top-down</small></div>
+    <div class="stat"><span class="label">Pixels with 3D</span><b id="s-cover">–</b><small>stereo only → with fill</small></div>
+    <div class="stat"><span class="label">Depth Anything error</span><b id="s-err">–</b><small id="s-err-note">median per photo, on stereo pixels it never saw</small></div>
+    <div class="stat"><span class="label">Mesh</span><b id="s-mesh">–</b><small id="s-mesh-note">triangles</small></div>
+  </div>
+
+  <section>
+    <h2>How one photo becomes ground</h2>
+    <p>The same four steps run on every frame. This is the frame with the most ground filled in.</p>
+    <div class="pipe">
+      <figure><div class="imgbox"><img src="img/step1_photo.jpg" alt="Navcam photo of rocky ground" loading="lazy"></div><figcaption><b>1 · Photo</b>Left Navcam, 1024 × 1024, lens distortion removed.</figcaption></figure>
+      <figure><div class="imgbox"><img src="img/step2_stereo.png" alt="Stereo depth map with holes" loading="lazy"></div><figcaption><b>2 · Stereo depth</b>From NASA's XYZ file. Checkerboard = no stereo match.</figcaption></figure>
+      <figure><div class="imgbox"><img src="img/step3_da_raw.png" alt="Depth Anything relative depth" loading="lazy"></div><figcaption><b>3 · Depth Anything</b>Every pixel, but no units: near and far only.</figcaption></figure>
+      <figure><div class="imgbox"><img src="img/step4_filled.png" alt="Stereo depth with holes filled" loading="lazy"></div><figcaption><b>4 · Scaled and merged</b>Two numbers fitted to the stereo pixels give it metres; it fills the holes.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>The site from above</h2>
+    <p>All frames merged into one height map on a <span class="mono">0.25 m</span> grid, north up, rover in the centre. Slope is measured over about <span class="mono">0.75 m</span>, roughly one stride.</p>
+    <div class="maps">
+      <figure class="map">
+        <div class="mapbox"><img src="img/map_height.png" alt="Shaded height map of the site"><div class="rover-dot"></div><div class="north">N ↑</div><div class="scalebar"><i id="bar-h"></i><span>5 m</span></div></div>
+        <figcaption id="cap-height">Height, shaded from the north-west.</figcaption>
+      </figure>
+      <figure class="map">
+        <div class="mapbox"><img src="img/map_slope.png" alt="Slope classes around the rover"><div class="rover-dot"></div><div class="north">N ↑</div><div class="scalebar"><i id="bar-s"></i><span>5 m</span></div></div>
+        <figcaption id="cap-slope">Walk slope classes.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Every frame, scored</h2>
+    <p>Each photo tries three ways of turning Depth Anything's output into metres and keeps the one that does best on a few stereo pixels it set aside. Error is then measured on stereo pixels the fit never saw. Photos aimed at the horizon gain the most.</p>
+    <div class="tablebox"><table>
+      <thead><tr><th>Frame</th><th>Points to</th><th>Looks</th><th>Stereo 3D</th><th>With fill</th><th>Fit used</th><th>Error, one plain fit</th><th>Error, chosen fit</th></tr></thead>
+      <tbody id="frames"></tbody>
+    </table></div>
+  </section>
+
+  <section class="notes">
+    <div>
+      <h2>What this shows</h2>
+      <ul>
+        <li>NASA's stereo XYZ files, the camera model and the rover pose line up to the millimetre, so many frames merge into one scene with no manual alignment.</li>
+        <li>Depth Anything V2 Small, with no training, scaled per photo to its stereo points, lands within about 5% of stereo and covers the holes stereo leaves.</li><li>How you scale it matters as much as the model. One straight-line fit fails on photos that see both nearby ground and distant hills; a power-law fit, chosen automatically, fixes most of that.</li>
+        <li>All 19 photos merge into one continuous ground surface on a 15 cm grid: stereo where any photo measured it, Depth Anything only where nothing else did. That surface gives a slope map, the layer a Marswalk planner needs.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>What it doesn't</h2>
+      <ul>
+        <li>Filled areas have no stereo to check against, so treat them as estimates, especially far from the rover. Where any frame has stereo, stereo is used and the estimate is dropped.</li>
+        <li>One site only. A Marswalk spans kilometres, so the route needs orbital terrain (HiRISE or CTX); this model is the close-up at one stop.</li>
+        <li>The slope colours use example limits (15° and 25°), not NASA EVA rules. The rover mask is a simple box.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p class="credit">Built with gale-marswalk-planner (AstroNox, NASA Space Apps 2026 rehearsal). Images and stereo data: NASA/JPL-Caltech, Mars Science Laboratory Navcam RDRs from the PDS Imaging Node (<span class="mono" id="cred-id">MSLNAV_1XXX</span>). Depth model: Depth Anything V2 Small (Apache-2.0). Viewer: three.js.</p>
+</div>
+
+<script src="../../vendor/three.r128.min.js"></script>
+<script src="../../vendor/OrbitControls.r128.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const pct = (x, d = 0) => (x * 100).toFixed(d) + '%';
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const state = { mode: 'photo', meta: null, mesh: null, pick: [] };
+
+  const SLOPE = [[15, '#2f9e62', 'Under 15°: easy walking'], [25, '#d9961c', '15–25°: careful footing'], [91, '#d64541', 'Over 25°: avoid on foot']];
+  const ramp = [[0, [59, 95, 138]], [0.3, [79, 143, 110]], [0.55, [201, 181, 106]], [0.8, [185, 132, 90]], [1, [242, 239, 233]]];
+  function rampColor(t) {
+    t = Math.min(1, Math.max(0, t));
+    for (let i = 1; i < ramp.length; i++) {
+      if (t <= ramp[i][0]) {
+        const [t0, c0] = ramp[i - 1], [t1, c1] = ramp[i], u = (t - t0) / (t1 - t0);
+        return c0.map((c, k) => (c + (c1[k] - c) * u) / 255);
+      }
+    }
+    return ramp[ramp.length - 1][1].map((c) => c / 255);
+  }
+  const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+
+  function legend() {
+    const L = $('legend'), m = state.meta;
+    if (state.mode === 'photo') L.innerHTML = '<div>Navcam brightness, as photographed.</div>';
+    if (state.mode === 'height') L.innerHTML = `<div class="ramp"></div><div style="justify-content:space-between" class="mono"><span>${m.map.height_min.toFixed(1)} m</span><span>relative to the rover's wheels</span><span>${m.map.height_max.toFixed(1)} m</span></div>`;
+    if (state.mode === 'slope') L.innerHTML = SLOPE.map(([, c, t]) => `<div><span class="sw" style="background:${c}"></span>${t}</div>`).join('') + '<div><span class="sw" style="background:#7d8792"></span>No slope estimate</div>';
+    if (state.mode === 'source') L.innerHTML = `<div><span class="sw" style="background:#8fa3b8"></span>Stereo (measured)</div><div><span class="sw" style="background:${css('--accent')}"></span>Depth Anything (estimated)</div>`;
+  }
+
+  function paint() {
+    const { geom, gray, src, slope, n } = state.mesh;
+    const pos = geom.attributes.position.array, col = geom.attributes.color.array;
+    const m = state.meta, acc = hex(css('--accent') || '#b06a1f');
+    for (let i = 0; i < n; i++) {
+      let c;
+      if (state.mode === 'photo') { const g = gray[i] / 255; c = [g, g, g]; }
+      else if (state.mode === 'height') c = rampColor((pos[i * 3 + 1] - m.map.height_min) / (m.map.height_max - m.map.height_min));
+      else if (state.mode === 'slope') {
+        const s = slope[i];
+        c = s === 255 ? [0.49, 0.53, 0.57] : hex(SLOPE.find(([lim]) => s < lim)[1]);
+      } else c = src[i] ? acc : [0.56, 0.64, 0.72];
+      col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
+    }
+    geom.attributes.color.needsUpdate = true;
+    const lit = state.mode !== 'photo';
+    state.mesh.obj.material = lit ? state.mesh.litMats : state.mesh.mats;
+    state.mesh.obj.material[1].visible = $('toggle-da').checked;
+    legend();
+  }
+
+  function stats() {
+    const m = state.meta, s = m.summary;
+    $('s-area').textContent = Math.round(m.map.area_m2).toLocaleString();
+    $('s-cover').textContent = `${pct(s.mean_stereo_cover)} → ${pct(s.mean_filled_cover)}`;
+    $('s-err').textContent = pct(s.median_da_absrel, 1);
+    $('s-err-note').textContent = `median per photo; worst ${pct(s.worst_da_absrel)} (${pct(s.worst_da_absrel_plain)} with one plain fit)`;
+    $('s-mesh').textContent = (m.counts.faces / 1e6).toFixed(2) + ' M';
+    $('hdr-sol').textContent = 'Sol ' + m.sol;
+    $('hdr-frames').textContent = m.frames.length;
+    $('hdr-title').textContent = `Sol ${m.sol} Terrain Model`; document.title = `Sol ${m.sol} Terrain Model`;
+    $('s-mesh-note').textContent = `triangles from ${m.frames.length} photos`;
+    const sh = m.map.slope_share;
+    $('cap-slope').textContent = `Walk slope: ${pct(sh.under15)} easy, ${pct(sh['15to25'])} careful, ${pct(sh.over25)} avoid. Grey edges have no data.`;
+    $('cap-height').textContent = `Height ${m.map.height_min.toFixed(1)} to ${m.map.height_max.toFixed(1)} m around the rover, shaded from the north-west. ${pct(m.map.da_only_share)} of mapped cells come only from Depth Anything.`;
+    const w = (5 / (2 * m.map.radius)) * 100 + '%';
+    $('bar-h').style.width = w; $('bar-s').style.width = w;
+    const dir = (a) => ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(a / 45) % 8];
+    $('frames').innerHTML = m.frames.map((f, i) => {
+      const e = f.da_absrel;
+      const cls = e == null ? 'none' : e < 0.08 ? 'ok' : e < 0.15 ? 'warn' : 'bad';
+      return `<tr><td><img src="img/f${String(i).padStart(2, '0')}.jpg" alt="Frame ${i + 1}"></td>
+        <td>${dir(f.azimuth)} ${f.azimuth.toFixed(0)}°</td><td>${f.elevation > 0 ? 'up' : 'down'} ${Math.abs(f.elevation).toFixed(0)}°</td>
+        <td>${pct(f.stereo_cover)}</td><td>${pct(f.filled_cover)}</td>
+        <td>${f.align || '–'}</td>
+        <td>${f.da_absrel_plain == null ? '–' : pct(f.da_absrel_plain, 1)}</td>
+        <td><span class="pill ${cls}">${e == null ? 'not enough stereo' : pct(e, 1)}</span></td></tr>`;
+    }).join('');
+  }
+
+  async function start() {
+    const vp = $('viewport');
+    if (!window.THREE || !THREE.OrbitControls) { $('status').textContent = 'The 3D library did not load. Check your connection and reload the page.'; return; }
+    let meta, buf;
+    try {
+      const [m_, b64] = await Promise.all([fetch('scene.json').then((r) => r.json()), fetch('scene.b64.txt').then((r) => r.text())]);
+      const raw = atob(b64.trim()), u8 = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) u8[i] = raw.charCodeAt(i);
+      meta = m_; buf = u8.buffer;
+    } catch (err) { $('status').textContent = 'The terrain data could not be loaded. Reload the page to try again.'; return; }
+    state.meta = meta; stats();
+    const n = meta.counts.vertices, nf = meta.counts.faces;
+    let o = 0;
+    const p16 = new Int16Array(buf, o, n * 3); o += n * 6;
+    const gray = new Uint8Array(buf, o, n); o += n;
+    const src = new Uint8Array(buf, o, n); o += n;
+    const slope = new Uint8Array(buf, o, n); o += n;
+    const idx = new Uint32Array(buf.slice(o, o + nf * 12));
+    const pos = new Float32Array(n * 3);
+    for (let i = 0; i < n * 3; i++) pos[i] = p16[i] / 100;
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geom.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+    geom.setIndex(new THREE.BufferAttribute(idx, 1));
+    meta.frame_face_ranges.forEach(([start, ns, nd]) => {
+      if (ns) geom.addGroup(start * 3, ns * 3, 0);
+      if (nd) geom.addGroup((start + ns) * 3, nd * 3, 1);
+    });
+    geom.computeVertexNormals();
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    vp.prepend(renderer.domElement);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(css('--view') || '#1c232c');
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.495; controls.minDistance = 2; controls.maxDistance = 80;
+    const home = () => { camera.position.set(-9, 11, 13); controls.target.set(2, -1, -2); controls.update(); };
+    home();
+    scene.add(new THREE.HemisphereLight(0xfff1e0, 0x3a3026, 0.85));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.75); sun.position.set(-20, 30, -10); scene.add(sun);
+
+    const basic = (vis) => new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, visible: vis });
+    const lamb = (vis) => new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, visible: vis });
+    const mats = [basic(true), basic(true)], litMats = [lamb(true), lamb(true)];
+    const obj = new THREE.Mesh(geom, mats);
+    scene.add(obj);
+    state.mesh = { geom, gray, src, slope, n, obj, mats, litMats };
+
+    // scale cues: 5 m rings and a rover-sized box (3.0 m long, 2.8 m wide, 2.2 m to the mast top)
+    const rings = new THREE.PolarGridHelper(25, 8, 5, 64, 0x7d8792, 0x56606b);
+    rings.material.transparent = true; rings.material.opacity = 0.35; rings.position.y = 0.02; scene.add(rings);
+    const rover = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(3.0, 2.2, 2.8)),
+      new THREE.LineBasicMaterial({ color: new THREE.Color(css('--accent') || '#b06a1f') }));
+    const hd = meta.rover_heading * Math.PI / 180;  // azimuth of rover forward, from north
+    rover.position.set(0, 1.1, 0); rover.rotation.y = Math.PI / 2 - hd; scene.add(rover);
+
+    const markA = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    const markB = markA.clone(); markA.visible = markB.visible = false; scene.add(markA, markB);
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0xffffff }));
+    line.visible = false; scene.add(line);
+
+    $('status').remove();
+    paint();
+    window.terrainView = { camera, controls, setMode: (m) => document.querySelector(`[data-mode="${m}"]`).click() };
+
+    function resize() {
+      const w = vp.clientWidth, h = vp.clientHeight;
+      renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    }
+    new ResizeObserver(resize).observe(vp); resize();
+
+    const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+    let down = null;
+    renderer.domElement.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+      const r = renderer.domElement.getBoundingClientRect();
+      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      const hit = ray.intersectObject(obj, false).find((h) => obj.material[h.face.materialIndex].visible);
+      if (!hit) return;
+      const p = hit.point, vi = hit.face.a;
+      if (state.pick.length >= 2) state.pick = [];
+      state.pick.push({ p: p.clone(), slope: slope[vi], src: src[vi] });
+      const [A, B] = state.pick;
+      markA.position.copy(A.p); markA.visible = true;
+      markB.visible = line.visible = !!B;
+      const row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
+      const sl = (x) => (x === 255 ? 'unknown' : x + '°');
+      if (!B) {
+        $('readout').innerHTML = `<dl>${row('From rover', Math.hypot(A.p.x, A.p.z).toFixed(1) + ' m')}${row('Height', (A.p.y >= 0 ? '+' : '') + A.p.y.toFixed(2) + ' m')}${row('Slope here', sl(A.slope))}${row('Depth from', A.src ? 'Depth Anything' : 'stereo')}</dl>`;
+      } else {
+        markB.position.copy(B.p);
+        line.geometry.setFromPoints([A.p, B.p]);
+        const run = Math.hypot(B.p.x - A.p.x, B.p.z - A.p.z), rise = B.p.y - A.p.y;
+        $('readout').innerHTML = `<dl>${row('Walk distance', run.toFixed(1) + ' m')}${row('Climb', (rise >= 0 ? '+' : '') + rise.toFixed(2) + ' m')}${row('Average grade', (Math.atan2(Math.abs(rise), run) * 180 / Math.PI).toFixed(1) + '°')}${row('Slope at end', sl(B.slope))}</dl>`;
+      }
+    });
+
+    document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+      state.mode = b.dataset.mode;
+      document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      paint();
+    }));
+    $('toggle-da').addEventListener('change', paint);
+    $('reset').addEventListener('click', home);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { scene.background = new THREE.Color(css('--view')); paint(); });
+
+    const needle = $('needle').parentElement;
+    (function loop() {
+      controls.update();
+      needle.style.transform = `rotate(${controls.getAzimuthalAngle()}rad)`;
+      renderer.render(scene, camera);
+      requestAnimationFrame(loop);
+    })();
+  }
+  start();
+})();
+</script>

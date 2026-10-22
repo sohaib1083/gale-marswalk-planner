@@ -14,6 +14,7 @@ import argparse
 import concurrent.futures as cf
 import io
 import json
+import sys
 import math
 import struct
 import time
@@ -198,4 +199,5 @@ def main():
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(line_buffering=True)  # progress shows up live in logs
     main()

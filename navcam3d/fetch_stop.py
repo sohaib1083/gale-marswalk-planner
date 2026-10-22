@@ -15,6 +15,7 @@ About 15 MB per frame, usually 5 to 20 frames per stop. Files land in data/raw/s
 import argparse
 import concurrent.futures as cf
 import json
+import sys
 import re
 import time
 import urllib.request
@@ -27,12 +28,23 @@ PDS = "https://planetarydata.jpl.nasa.gov/img/data/msl/MSLNAV_1XXX/"
 WAYPOINTS = "https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json"
 
 
-def cached(url, name, max_age_days=7):
+def cached(url, name, max_age_days=7, tries=6):
+    """Fetch once and keep a local copy. NASA's server sometimes cuts long listings short, so retry."""
     CACHE.mkdir(parents=True, exist_ok=True)
     p = CACHE / name
-    if not p.exists() or time.time() - p.stat().st_mtime > max_age_days * 86400:
-        p.write_bytes(urllib.request.urlopen(url, timeout=600).read())
-    return p.read_text(errors="ignore")
+    if p.exists() and time.time() - p.stat().st_mtime < max_age_days * 86400:
+        return p.read_text(errors="ignore")
+    for k in range(tries):
+        try:
+            data = urllib.request.urlopen(url, timeout=600).read()
+            tmp = p.with_name(p.name + ".tmp")
+            tmp.write_bytes(data)
+            tmp.rename(p)
+            return data.decode(errors="ignore")
+        except Exception as e:  # IncompleteRead, timeouts, resets
+            print(f"  retrying {name} ({type(e).__name__})", flush=True)
+            time.sleep(3 + 3 * k)
+    raise RuntimeError(f"could not download {url}")
 
 
 def stop_for_sol(sol):
@@ -110,9 +122,17 @@ def main():
     ap.add_argument("--extra-sols", type=int, default=0, help="also look in the next N sols' folders")
     ap.add_argument("--workers", type=int, default=6)
     a = ap.parse_args()
+    failed = []
     for sol in a.sols:
-        fetch(sol, a.extra_sols, a.workers)
+        try:
+            fetch(sol, a.extra_sols, a.workers)
+        except (SystemExit, Exception) as e:   # one bad stop must not stop the batch
+            print(f"sol {sol}: skipped ({e})", flush=True)
+            failed.append(sol)
+    if failed:
+        print("skipped sols:", " ".join(map(str, failed)))
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(line_buffering=True)  # progress shows up live in logs
     main()

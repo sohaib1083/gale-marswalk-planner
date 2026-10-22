@@ -36,6 +36,7 @@ ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 import fetch_stop  # noqa: E402
 import pds  # noqa: E402
+from align import choose_align, find_hazards, fit_align  # noqa: E402
 
 MODEL = "depth-anything/Depth-Anything-V2-Small-hf"  # 25M parameters, Apache-2.0
 CELL = 0.25          # slope map resolution, metres
@@ -44,26 +45,6 @@ RADIUS = 24.0        # metres around the rover
 MAX_DEPTH = 60.0     # stereo beyond this is uncertain (42 cm baseline); also the furthest Depth Anything may fill
 SLOPE_CLASSES = [(0, 15, (47, 158, 98)), (15, 25, (226, 160, 40)), (25, 91, (214, 69, 65))]
 rng = np.random.default_rng(0)
-
-
-# ---------- turning Depth Anything's unitless output into metres ----------
-def fit_align(method, r, z):
-    """plain: 1/z = s*r + t.  weighted: same, scored as % error.  power: z = a * r^k (near + far in one photo)."""
-    if method == "plain":
-        s, t = np.linalg.lstsq(np.stack([r, np.ones_like(r)], 1), 1 / z, rcond=None)[0]
-        return lambda R_: 1 / np.maximum(s * R_ + t, 1e-3)
-    if method == "weighted":
-        s, t = np.linalg.lstsq(np.stack([r * z, z], 1), np.ones_like(r), rcond=None)[0]
-        return lambda R_: 1 / np.maximum(s * R_ + t, 1e-3)
-    k, c = np.polyfit(np.log(np.maximum(r, 1e-3)), np.log(z), 1)
-    return lambda R_: np.exp(c) * np.maximum(R_, 1e-3) ** k
-
-
-def choose_align(r, z):
-    cut = rng.random(len(r)) < 0.8
-    best = min(("plain", "weighted", "power"),
-               key=lambda m: np.mean(np.abs(fit_align(m, r[cut], z[cut])(r[~cut]) - z[~cut]) / z[~cut]))
-    return best, fit_align(best, r, z)
 
 
 # ---------- helpers ----------
@@ -123,10 +104,18 @@ def write_glb(path, verts, rgb, faces, name):
 
 
 class Depth:
-    def __init__(self):
+    """Depth Anything V2 Small, optionally with fine-tuned neck/head weights (navcam3d/finetune_depth.py)."""
+
+    def __init__(self, weights=None):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.proc = AutoImageProcessor.from_pretrained(MODEL)
-        self.model = AutoModelForDepthEstimation.from_pretrained(MODEL).to(self.device).eval()
+        self.model = AutoModelForDepthEstimation.from_pretrained(MODEL)
+        self.name = "Depth Anything V2 Small (pretrained)"
+        if weights:
+            state = torch.load(weights, map_location="cpu")
+            self.model.load_state_dict(state["state_dict"], strict=False)
+            self.name = f"Depth Anything V2 Small, fine-tuned on Navcam ({Path(weights).name})"
+        self.model = self.model.to(self.device).eval()
 
     def __call__(self, img8):
         rgb = Image.fromarray(np.stack([img8] * 3, axis=-1))
@@ -272,6 +261,9 @@ def build(sol, depth_model, fetch=True):
     ok_g = (data | fill) & (np.hypot(ce, cn) <= RADIUS)
     w_ = ndimage.gaussian_filter(ok_g.astype(float), 0.8)
     gh = ndimage.gaussian_filter(np.where(ok_g, gh, 0), 0.8) / np.maximum(w_, 1e-6)
+    hazards = [{"east": round(float(xx_c * GRID - RADIUS + GRID / 2), 2), "south": round(float(yy_c * GRID - RADIUS + GRID / 2), 2),
+                "height": hgt, "area": area, "estimated": bool(src_g[int(yy_c), int(xx_c)])}
+               for yy_c, xx_c, hgt, area in find_hazards(gh, ok_g, GRID)]
     gidx = -np.ones((ng, ng), np.int64)
     gidx[ok_g] = np.arange(ok_g.sum())
     V = np.stack([ce[ok_g], gh[ok_g], -cn[ok_g]], 1)  # x = east, y = up, z = south (metres from the rover)
@@ -304,7 +296,8 @@ def build(sol, depth_model, fetch=True):
         "sol": sol, "time": pds.get(pds.read_label(pairs[0][1]), "START_TIME"),
         "site_drive": pairs[0][1].stem[18:25], "stop": stop,
         "rover_heading": float(np.degrees(np.arctan2(R[1, 0], R[0, 0])) % 360),  # forward, degrees from north
-        "frames": frames, "show_frame": ks,
+        "frames": frames, "show_frame": ks, "depth_model": depth_model.name,
+        "hazards": hazards, "hazard_rule": "patches at least 0.25 m above the ground within ~1.5 m",
         "counts": {"vertices": int(len(V)), "faces": int(len(tris)), "faces_stereo": n_st},
         "layout": ["pos:int16x3 cm", "gray:uint8", "src:uint8", "slope:uint8", "index:uint32x3"],
         "frame_face_ranges": [[0, n_st, n_da]],
@@ -326,7 +319,7 @@ def build(sol, depth_model, fetch=True):
     (out / "scene.json").write_text(json.dumps(meta, indent=1))
     shutil.copy(HERE / "stop_report.html", out / "index.html")
     print(f"sol {sol}: {len(V):,} ground points, {len(tris):,} triangles, median error "
-          f"{meta['summary']['median_da_absrel']:.1%}, {meta['map']['area_m2']:.0f} m² mapped "
+          f"{meta['summary']['median_da_absrel']:.1%}, {meta['map']['area_m2']:.0f} m² mapped, {len(hazards)} hazards "
           f"({time.time() - t0:.0f} s) -> {out.relative_to(ROOT)}")
     return meta
 
@@ -335,11 +328,20 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("sols", type=int, nargs="+")
     ap.add_argument("--no-fetch", action="store_true", help="only use photos already in data/raw/")
+    ap.add_argument("--model", help="fine-tuned weights from navcam3d/finetune_depth.py (default: pretrained)")
     a = ap.parse_args()
-    depth_model = Depth()
+    depth_model = Depth(a.model)
+    failed = []
     for sol in a.sols:
-        build(sol, depth_model, fetch=not a.no_fetch)
+        try:
+            build(sol, depth_model, fetch=not a.no_fetch)
+        except (SystemExit, Exception) as e:   # one bad stop must not stop the batch
+            print(f"sol {sol}: skipped ({e})", flush=True)
+            failed.append(sol)
+    if failed:
+        print("skipped sols:", " ".join(map(str, failed)))
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(line_buffering=True)  # progress shows up live in logs
     main()
